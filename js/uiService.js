@@ -6,6 +6,9 @@ export class UIService {
     this.resultBox = document.getElementById("result-box");
     this.loadingSpinner = document.getElementById("loading-spinner");
     this.questionElement = document.getElementById("question");
+    this.questionDescriptionElement = document.getElementById(
+      "question-description"
+    );
     this.answerInput = document.getElementById("answer");
     this.submitButton = document.getElementById("submit-btn");
     this.apiKeyInput = document.getElementById("api-key");
@@ -54,13 +57,42 @@ export class UIService {
     }
   }
 
-  showQuestion(question) {
+  showQuestion(question, description, commonDescription, chips) {
     this.questionElement.textContent = question;
+    this.questionDescriptionElement.innerHTML = `
+      <p>${description}</p>
+      <p class="common-description">${commonDescription}</p>
+    `;
     this.questionBox.classList.remove("hidden");
     this.resultBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.answerInput.value = "";
     this.answerInput.focus();
+    this.renderChips(chips || []);
+  }
+
+  renderChips(chips) {
+    let chipsContainer = document.getElementById("chips-container");
+    if (!chipsContainer) {
+      chipsContainer = document.createElement("div");
+      chipsContainer.id = "chips-container";
+      chipsContainer.className = "chips-container";
+      this.answerInput.parentNode.insertBefore(
+        chipsContainer,
+        this.answerInput
+      );
+    }
+    chipsContainer.innerHTML = "";
+    chips.forEach((chip) => {
+      const btn = document.createElement("button");
+      btn.className = "chip";
+      btn.textContent = chip;
+      btn.onclick = () => {
+        this.answerInput.value = chip;
+        this.answerInput.focus();
+      };
+      chipsContainer.appendChild(btn);
+    });
   }
 
   showLoading() {

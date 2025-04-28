@@ -2,12 +2,17 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#4a90e2" />
     <title>선물 추천기🎁</title>
     <link rel="stylesheet" href="styles/main.css" />
   </head>
   <body>
     <div class="container">
-      <div class="version">v0.0.3</div>
+      <div class="version">v0.0.4</div>
       <h1>🎁 5분만에 선물 추천받기</h1>
 
       <div id="api-key-box" class="api-key-box">
@@ -25,7 +30,9 @@
 
       <div id="question-box" class="question-box hidden">
         <p id="question" class="question-text"></p>
+        <p id="question-description" class="question-description"></p>
         <div class="input-group">
+          <div id="chips-container" class="chips-container"></div>
           <input type="text" id="answer" class="answer-input" />
           <button id="submit-btn" class="submit-btn">다음</button>
         </div>

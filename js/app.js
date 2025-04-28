@@ -1,4 +1,9 @@
-import { QUESTIONS } from "./constants.js";
+import {
+  QUESTIONS,
+  QUESTION_DESCRIPTIONS,
+  QUESTION_CHIPS,
+  COMMON_DESCRIPTION,
+} from "./constants.js";
 import { ApiService } from "./apiService.js";
 import { UIService } from "./uiService.js";
 
@@ -57,7 +62,12 @@ class GiftRecommender {
 
     this.api = new ApiService(apiKey);
     this.ui.hideApiKeyInput();
-    this.ui.showQuestion(QUESTIONS[this.currentIndex]);
+    this.ui.showQuestion(
+      QUESTIONS[this.currentIndex],
+      QUESTION_DESCRIPTIONS[this.currentIndex],
+      COMMON_DESCRIPTION,
+      QUESTION_CHIPS[this.currentIndex]
+    );
     this.ui.setSubmitHandler(() => {
       console.log("Submit button clicked");
       this.handleSubmit();
@@ -76,7 +86,12 @@ class GiftRecommender {
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS.length) {
-      this.ui.showQuestion(QUESTIONS[this.currentIndex]);
+      this.ui.showQuestion(
+        QUESTIONS[this.currentIndex],
+        QUESTION_DESCRIPTIONS[this.currentIndex],
+        COMMON_DESCRIPTION,
+        QUESTION_CHIPS[this.currentIndex]
+      );
     } else {
       await this.getRecommendations();
     }
