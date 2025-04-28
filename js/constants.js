@@ -6,5 +6,5 @@ export const QUESTIONS = [
 ];
 
 export const API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-export const MODEL = "gpt-4"; // 또는 gpt-3.5-turbo
+export const MODEL = "gpt-4o-mini"; // 또는 gpt-3.5-turbo
 export const TEMPERATURE = 0.7;
