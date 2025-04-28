@@ -108,6 +108,47 @@ export class UIService {
     this.loadingSpinner.classList.add("hidden");
     this.resultBox.classList.remove("hidden");
 
+    // 가격대 정보 가져오기 (두 번째 질문의 답변)
+    const priceRange = this.answers[1];
+    let minPrice = "";
+    let maxPrice = "";
+
+    // 가격대에 따른 minPrice, maxPrice 설정
+    switch (priceRange) {
+      case "1만원 이하":
+        minPrice = "0";
+        maxPrice = "10000";
+        break;
+      case "1-3만원":
+        minPrice = "10000";
+        maxPrice = "30000";
+        break;
+      case "3-5만원":
+        minPrice = "30000";
+        maxPrice = "50000";
+        break;
+      case "5-10만원":
+        minPrice = "50000";
+        maxPrice = "100000";
+        break;
+      case "10-30만원":
+        minPrice = "100000";
+        maxPrice = "300000";
+        break;
+      case "30-50만원":
+        minPrice = "300000";
+        maxPrice = "500000";
+        break;
+      case "50만원 이상":
+        minPrice = "500000";
+        maxPrice = "";
+        break;
+      case "100만원 이상":
+        minPrice = "1000000";
+        maxPrice = "";
+        break;
+    }
+
     this.resultBox.innerHTML = `
       <h2>🎁 추천 키워드</h2>
       <div class="recommendations">
@@ -119,7 +160,9 @@ export class UIService {
             <p>${descriptions[index]}</p>
             <a href="https://search.shopping.naver.com/search/all?query=${encodeURIComponent(
               word
-            )}" target="_blank" class="search-link">
+            )}${minPrice ? `&minPrice=${minPrice}` : ""}${
+              maxPrice ? `&maxPrice=${maxPrice}` : ""
+            }" target="_blank" class="search-link">
               상품 찾아보기
             </a>
           </div>
