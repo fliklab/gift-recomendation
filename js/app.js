@@ -153,7 +153,7 @@ class GiftRecommender {
     try {
       this.ui.showLoading();
       const result = await this.api.getGiftRecommendations(this.answers);
-      this.ui.showResult(result.keywords, result.descriptions);
+      this.ui.showResult(result.keywords, result.descriptions, this.answers);
     } catch (error) {
       console.error("추천 받기 실패:", error);
       this.ui.showError(

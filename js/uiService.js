@@ -103,50 +103,57 @@ export class UIService {
     this.loadingSpinner.classList.remove("hidden");
   }
 
-  showResult(keywords, descriptions) {
+  showResult(keywords, descriptions, answers = []) {
     this.questionBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.resultBox.classList.remove("hidden");
 
     // 가격대 정보 가져오기 (두 번째 질문의 답변)
-    const priceRange = this.answers[1];
     let minPrice = "";
     let maxPrice = "";
 
-    // 가격대에 따른 minPrice, maxPrice 설정
-    switch (priceRange) {
-      case "1만원 이하":
-        minPrice = "0";
-        maxPrice = "10000";
-        break;
-      case "1-3만원":
-        minPrice = "10000";
-        maxPrice = "30000";
-        break;
-      case "3-5만원":
-        minPrice = "30000";
-        maxPrice = "50000";
-        break;
-      case "5-10만원":
-        minPrice = "50000";
-        maxPrice = "100000";
-        break;
-      case "10-30만원":
-        minPrice = "100000";
-        maxPrice = "300000";
-        break;
-      case "30-50만원":
-        minPrice = "300000";
-        maxPrice = "500000";
-        break;
-      case "50만원 이상":
-        minPrice = "500000";
-        maxPrice = "";
-        break;
-      case "100만원 이상":
-        minPrice = "1000000";
-        maxPrice = "";
-        break;
+    try {
+      const priceRange = answers[1];
+      if (priceRange) {
+        // 가격대에 따른 minPrice, maxPrice 설정
+        switch (priceRange) {
+          case "1만원 이하":
+            minPrice = "0";
+            maxPrice = "10000";
+            break;
+          case "1-3만원":
+            minPrice = "10000";
+            maxPrice = "30000";
+            break;
+          case "3-5만원":
+            minPrice = "30000";
+            maxPrice = "50000";
+            break;
+          case "5-10만원":
+            minPrice = "50000";
+            maxPrice = "100000";
+            break;
+          case "10-30만원":
+            minPrice = "100000";
+            maxPrice = "300000";
+            break;
+          case "30-50만원":
+            minPrice = "300000";
+            maxPrice = "500000";
+            break;
+          case "50만원 이상":
+            minPrice = "500000";
+            maxPrice = "";
+            break;
+          case "100만원 이상":
+            minPrice = "1000000";
+            maxPrice = "";
+            break;
+        }
+      }
+    } catch (error) {
+      console.error("가격대 정보 파싱 실패:", error);
+      // 가격대 정보 파싱 실패 시 무시하고 진행
     }
 
     this.resultBox.innerHTML = `
