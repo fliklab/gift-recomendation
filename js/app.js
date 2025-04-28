@@ -116,23 +116,33 @@ class GiftRecommender {
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS.length) {
-      try {
-        const nextQuestion = await this.api.getNextQuestion(this.answers);
-        this.ui.showQuestion(
-          nextQuestion.question,
-          nextQuestion.description,
-          COMMON_DESCRIPTION,
-          nextQuestion.chips
-        );
-      } catch (error) {
-        console.error("다음 질문 생성 실패:", error);
-        // 실패 시 기본 질문으로 폴백
+      // 처음 3개 질문은 OpenAI를 사용하지 않음
+      if (this.currentIndex < 3) {
         this.ui.showQuestion(
           QUESTIONS[this.currentIndex],
           QUESTION_DESCRIPTIONS[this.currentIndex],
           COMMON_DESCRIPTION,
           QUESTION_CHIPS[this.currentIndex]
         );
+      } else {
+        try {
+          const nextQuestion = await this.api.getNextQuestion(this.answers);
+          this.ui.showQuestion(
+            nextQuestion.question,
+            nextQuestion.description,
+            COMMON_DESCRIPTION,
+            nextQuestion.chips
+          );
+        } catch (error) {
+          console.error("다음 질문 생성 실패:", error);
+          // 실패 시 기본 질문으로 폴백
+          this.ui.showQuestion(
+            QUESTIONS[this.currentIndex],
+            QUESTION_DESCRIPTIONS[this.currentIndex],
+            COMMON_DESCRIPTION,
+            QUESTION_CHIPS[this.currentIndex]
+          );
+        }
       }
     } else {
       await this.getRecommendations();
