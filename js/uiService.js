@@ -67,6 +67,8 @@ export class UIService {
     this.resultBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.answerInput.value = "";
+    this.answerInput.disabled = false;
+    this.submitButton.classList.remove("loading");
     this.answerInput.focus();
     this.renderChips(chips || []);
   }
@@ -101,16 +103,31 @@ export class UIService {
     this.loadingSpinner.classList.remove("hidden");
   }
 
-  showResult(keywords) {
+  showResult(keywords, descriptions) {
     this.questionBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.resultBox.classList.remove("hidden");
 
     this.resultBox.innerHTML = `
       <h2>🎁 추천 키워드</h2>
-      <ul>
-        ${keywords.map((word) => `<li>${word}</li>`).join("")}
-      </ul>
+      <div class="recommendations">
+        ${keywords
+          .map(
+            (word, index) => `
+          <div class="recommendation-item">
+            <h3>${word}</h3>
+            <p>${descriptions[index]}</p>
+            <a href="https://search.shopping.naver.com/search/all?query=${encodeURIComponent(
+              word
+            )}" target="_blank" class="search-link">
+              상품 찾아보기
+            </a>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+      <button class="restart-btn" onclick="window.location.reload()">다시 시작하기</button>
     `;
   }
 
@@ -132,9 +149,16 @@ export class UIService {
   }
 
   setSubmitHandler(handler) {
-    this.submitButton.addEventListener("click", handler);
+    this.submitButton.addEventListener("click", () => {
+      this.answerInput.disabled = true;
+      this.submitButton.classList.add("loading");
+      handler();
+    });
+
     this.answerInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {
+        this.answerInput.disabled = true;
+        this.submitButton.classList.add("loading");
         handler();
       }
     });

@@ -116,12 +116,24 @@ class GiftRecommender {
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS.length) {
-      this.ui.showQuestion(
-        QUESTIONS[this.currentIndex],
-        QUESTION_DESCRIPTIONS[this.currentIndex],
-        COMMON_DESCRIPTION,
-        QUESTION_CHIPS[this.currentIndex]
-      );
+      try {
+        const nextQuestion = await this.api.getNextQuestion(this.answers);
+        this.ui.showQuestion(
+          nextQuestion.question,
+          nextQuestion.description,
+          COMMON_DESCRIPTION,
+          nextQuestion.chips
+        );
+      } catch (error) {
+        console.error("다음 질문 생성 실패:", error);
+        // 실패 시 기본 질문으로 폴백
+        this.ui.showQuestion(
+          QUESTIONS[this.currentIndex],
+          QUESTION_DESCRIPTIONS[this.currentIndex],
+          COMMON_DESCRIPTION,
+          QUESTION_CHIPS[this.currentIndex]
+        );
+      }
     } else {
       await this.getRecommendations();
     }
@@ -130,8 +142,8 @@ class GiftRecommender {
   async getRecommendations() {
     try {
       this.ui.showLoading();
-      const keywords = await this.api.getGiftRecommendations(this.answers);
-      this.ui.showResult(keywords);
+      const result = await this.api.getGiftRecommendations(this.answers);
+      this.ui.showResult(result.keywords, result.descriptions);
     } catch (error) {
       console.error("추천 받기 실패:", error);
       this.ui.showError(
