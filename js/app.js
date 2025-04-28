@@ -13,6 +13,13 @@ class GiftRecommender {
   init() {
     console.log("Initializing...");
     this.ui.showApiKeyInput();
+
+    // API 키 입력 필드의 type을 text로 변경
+    const apiKeyInput = document.getElementById("api-key");
+    if (apiKeyInput) {
+      apiKeyInput.type = "text";
+    }
+
     this.ui.setStartHandler(() => {
       console.log("Start button clicked");
       this.handleStart();
@@ -29,10 +36,10 @@ class GiftRecommender {
     }
 
     // API 키 형식 검증
-    const apiKeyPattern = /^sk-[A-Za-z0-9]{32,}$/;
+    const apiKeyPattern = /^sk-[A-Za-z0-9-_]{32,}$/;
     if (!apiKeyPattern.test(apiKey)) {
       alert(
-        "올바른 API 키 형식이 아닙니다!\nsk-로 시작하고, 그 뒤에 32자 이상의 영문자와 숫자가 와야 합니다."
+        "올바른 API 키 형식이 아닙니다!\nsk-로 시작하고, 그 뒤에 32자 이상의 영문자, 숫자, 하이픈(-), 언더스코어(_)가 와야 합니다."
       );
       return;
     }
