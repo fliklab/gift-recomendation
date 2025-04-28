@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>선물 추천기🎁</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; padding: 20px">
+    <h1>🎁 5분만에 선물 추천받기</h1>
+
+    <div id="question-box">
+      <p id="question"></p>
+      <input type="text" id="answer" style="width: 300px" />
+      <button onclick="submitAnswer()">다음</button>
+    </div>
+
+    <div id="result-box" style="margin-top: 30px"></div>
+
+    <script>
+          const questions = [
+            "누구에게 선물할 건가요? (가족, 연인, 친구, 동료 중)",
+            "그 분의 나이는 대략 몇 살쯤 될까요?",
+            "요즘 그분이 좋아하거나 관심 있어 하는 것들이 있을까요?",
+            "이번 선물은 어떤 상황을 위한 건가요? (ex. 생일, 입사 축하, 감사 인사 등)"
+          ];
+
+          let currentIndex = 0;
+          let answers = [];
+
+          const openaiApiKey = import.meta.env?.VITE_OPENAI_API_KEY || "YOUR_OPENAI_API_KEY_HERE"; // .env에서 넣을 예정
+
+          document.getElementById('question').innerText = questions[currentIndex];
+
+          function submitAnswer() {
+            const input = document.getElementById('answer').value.trim();
+            if (!input) return alert("답변을 입력해주세요!");
+
+            answers.push(input);
+            document.getElementById('answer').value = "";
+
+            currentIndex++;
+
+            if (currentIndex < questions.length) {
+              document.getElementById('question').innerText = questions[currentIndex];
+            } else {
+              document.getElementById('question-box').style.display = 'none';
+              askOpenAI();
+            }
+          }
+
+          async function askOpenAI() {
+            const prompt = `
+      당신은 뛰어난 선물 추천 도우미입니다.
+
+      아래 사용자의 정보를 참고하여,
+      "선물 키워드" 4개를 추천해주세요.
+      - 키워드는 짧게 (1~2단어)
+      - 서로 다른 카테고리로 다양하게 추천
+      - 선물 대상과 상황을 고려해서 현실성 있게 추천
+
+      사용자 정보:
+      - 관계: ${answers[0]}
+      - 나이: ${answers[1]}
+      - 관심사: ${answers[2]}
+      - 상황: ${answers[3]}
+
+      결과는 JSON 배열 형식으로만 출력해주세요.
+      예시: ["향수", "운동화", "커피머신", "꽃다발"]
+      `;
+
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openaiApiKey}`
+              },
+              body: JSON.stringify({
+                model: "gpt-4o", // 또는 gpt-3.5-turbo
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.7
+              })
+            });
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+
+            try {
+              const keywords = JSON.parse(content);
+              showResult(keywords);
+            } catch (error) {
+              document.getElementById('result-box').innerHTML = `<p>키워드 추출 실패 😭 다시 시도해주세요.</p>`;
+              console.error(error);
+            }
+          }
+
+          function showResult(keywords) {
+            const resultBox = document.getElementById('result-box');
+            resultBox.innerHTML = `
+              <h2>🎁 추천 키워드</h2>
+              <ul>
+                ${keywords.map(word => `<li>${word}</li>`).join('')}
+              </ul>
+            `;
+          }
+    </script>
+  </body>
+</html>
