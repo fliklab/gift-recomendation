@@ -17,6 +17,36 @@ class GiftRecommender {
 
   init() {
     console.log("Initializing...");
+
+    // URL에서 API 키 가져오기
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiKeyFromUrl = urlParams.get("apiKey");
+
+    if (apiKeyFromUrl) {
+      console.log("API key found in URL");
+      // API 키 형식 검증
+      const apiKeyPattern = /^sk-[A-Za-z0-9-_]{32,}$/;
+      if (apiKeyPattern.test(apiKeyFromUrl)) {
+        console.log("API key is valid");
+        this.api = new ApiService(apiKeyFromUrl);
+        this.ui.hideApiKeyInput();
+        this.ui.showQuestion(
+          QUESTIONS[this.currentIndex],
+          QUESTION_DESCRIPTIONS[this.currentIndex],
+          COMMON_DESCRIPTION,
+          QUESTION_CHIPS[this.currentIndex]
+        );
+        this.ui.setSubmitHandler(() => {
+          console.log("Submit button clicked");
+          this.handleSubmit();
+        });
+        return;
+      } else {
+        console.log("Invalid API key format in URL");
+        alert("URL의 API 키 형식이 올바르지 않습니다!");
+      }
+    }
+
     this.ui.showApiKeyInput();
 
     // API 키 입력 필드의 type을 text로 변경
