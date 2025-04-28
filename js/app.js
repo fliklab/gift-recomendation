@@ -20,6 +20,14 @@ class GiftRecommender {
       apiKeyInput.type = "text";
     }
 
+    // sessionStorage에 저장된 API 키가 있으면 자동 입력 및 바로 시작
+    const savedApiKey = sessionStorage.getItem("openai_api_key");
+    if (savedApiKey) {
+      apiKeyInput.value = savedApiKey;
+      this.handleStart();
+      return;
+    }
+
     this.ui.setStartHandler(() => {
       console.log("Start button clicked");
       this.handleStart();
@@ -43,6 +51,9 @@ class GiftRecommender {
       );
       return;
     }
+
+    // sessionStorage에 저장
+    sessionStorage.setItem("openai_api_key", apiKey);
 
     this.api = new ApiService(apiKey);
     this.ui.hideApiKeyInput();

@@ -28,7 +28,8 @@ export class ApiService {
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      return JSON.parse(content);
+      const cleaned = this._cleanJSONResponse(content);
+      return JSON.parse(cleaned);
     } catch (error) {
       console.error("API 호출 중 오류 발생:", error);
       throw error;
@@ -54,5 +55,13 @@ export class ApiService {
 결과는 JSON 배열 형식으로만 출력해주세요.
 예시: ["향수", "운동화", "커피머신", "꽃다발"]
 `;
+  }
+
+  _cleanJSONResponse(responseText) {
+    // 코드블록(```json ... ```) 제거 및 trim
+    return responseText
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
   }
 }
