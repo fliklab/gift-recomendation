@@ -399,7 +399,7 @@ export class OptionsModal {
         // 질문 텍스트
         const questionTextRow = document.createElement("div");
         questionTextRow.className = `settings-row question-text-row ${
-          isAIQuestion ? "ai-mode" : ""
+          isAIQuestion ? "ai-mode hidden" : ""
         }`;
         questionTextRow.innerHTML = `
           <label for="question-text-${index}">질문</label>

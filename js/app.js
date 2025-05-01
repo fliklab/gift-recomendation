@@ -5,6 +5,8 @@ import {
   QUESTION_CHIPS,
   QUESTION_TYPES,
   COMMON_DESCRIPTION,
+  MODEL,
+  TEMPERATURE,
 } from "./constants.js";
 import { ApiService } from "./apiService.js";
 import { UIService } from "./uiService.js";
@@ -154,8 +156,11 @@ class GiftRecommender {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
           this.currentQuestion = nextQuestion.question;
+
+          // AI 맞춤형 질문인 경우 UI에 질문 필드를 숨기고 설명만 표시
+          document.getElementById("question").classList.add("hidden");
           this.ui.showQuestion(
-            this.currentQuestion,
+            "", // 빈 질문 전달
             nextQuestion.description,
             COMMON_DESCRIPTION(),
             nextQuestion.chips
@@ -164,6 +169,7 @@ class GiftRecommender {
           console.error("다음 질문 생성 실패:", error);
           // 실패 시 기본 질문으로 폴백
           this.currentQuestion = QUESTIONS()[this.currentIndex];
+          document.getElementById("question").classList.remove("hidden");
           this.ui.showQuestion(
             this.currentQuestion,
             QUESTION_DESCRIPTIONS()[this.currentIndex],
@@ -174,6 +180,7 @@ class GiftRecommender {
       } else {
         // 일반 질문 처리 (미리 정의된 질문 사용)
         this.currentQuestion = QUESTIONS()[this.currentIndex];
+        document.getElementById("question").classList.remove("hidden");
         this.ui.showQuestion(
           this.currentQuestion,
           QUESTION_DESCRIPTIONS()[this.currentIndex],
@@ -229,7 +236,8 @@ class GiftRecommender {
           result.keywords,
           result.descriptions,
           this.answers,
-          this.questionAnswerPairs
+          this.questionAnswerPairs,
+          `${MODEL()}(temperature:${TEMPERATURE()})`
         );
       }, 1000);
     } catch (error) {

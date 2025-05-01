@@ -114,7 +114,13 @@ export class UIService {
     }
   }
 
-  showResult(keywords, descriptions, answers = [], questionAnswerPairs = []) {
+  showResult(
+    keywords,
+    descriptions,
+    answers = [],
+    questionAnswerPairs = [],
+    modelInfo
+  ) {
     this.questionBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.resultBox.classList.remove("hidden");
@@ -201,6 +207,7 @@ export class UIService {
       <div class="summary-box">
         <h3>🔍 추천 결과 요약</h3>
         <div class="summary-content" id="summary-content">
+      
           <h4>📋 질문 및 답변</h4>
           ${
             questionAnswerPairs.length > 0
@@ -220,6 +227,10 @@ export class UIService {
                 `<p><strong>${word}</strong>: ${descriptions[index]}</p>`
             )
             .join("")}
+            
+          <h4>🤖 모델 정보</h4>
+          <p>${modelInfo || "모델 정보가 없습니다."}</p>
+          
         </div>
         <button class="copy-btn" id="copy-summary-btn">복사하기</button>
       </div>
@@ -232,7 +243,9 @@ export class UIService {
       .getElementById("copy-summary-btn")
       .addEventListener("click", () => {
         // 복사할 텍스트 생성
-        let summaryText = "📋 질문 및 답변\n";
+        let summaryText = "";
+
+        summaryText += "📋 질문 및 답변\n";
         questionAnswerPairs.forEach((pair) => {
           summaryText += `${pair.question}: ${pair.answer}\n`;
         });
@@ -241,6 +254,11 @@ export class UIService {
         keywords.forEach((word, index) => {
           summaryText += `${word}: ${descriptions[index]}\n`;
         });
+
+        if (modelInfo) {
+          summaryText += "🤖 모델 정보\n";
+          summaryText += `${modelInfo}\n\n`;
+        }
 
         navigator.clipboard
           .writeText(summaryText)
