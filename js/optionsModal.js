@@ -64,6 +64,7 @@ export class OptionsModal {
     this.modalContainer = null;
     this.saveButton = null;
     this.resetButton = null;
+    this.copyButton = null;
     this.closeButton = null;
     this.modalButton = null;
 
@@ -73,131 +74,31 @@ export class OptionsModal {
   /**
    * 초기 설정 및 DOM 요소 생성
    */
-  init() {
+  async init() {
     this.createModalButton();
     this.createModalContainer();
-    this.loadSettings();
+    await this.loadSettings();
     this.setupEventListeners();
   }
 
   /**
    * 현재 설정 로드
    */
-  loadSettings() {
+  async loadSettings() {
     // constants.js에서 설정 로드
-    import("./constants.js").then((constants) => {
-      this.originalSettings = {
-        questions: [...constants.QUESTIONS],
-        questionDescriptions: [...constants.QUESTION_DESCRIPTIONS],
-        questionChips: JSON.parse(JSON.stringify(constants.QUESTION_CHIPS)),
-        questionTypes: constants.QUESTION_TYPES
-          ? [...constants.QUESTION_TYPES]
-          : Array(constants.QUESTIONS.length).fill("normal"),
-        commonDescription: constants.COMMON_DESCRIPTION,
-        model: constants.MODEL,
-        temperature: constants.TEMPERATURE,
-        apiEndpoint: constants.API_ENDPOINT,
-      };
-
-      // localStorage에서 저장된 설정 확인
-      const savedSettings = localStorage.getItem("customSettings");
-      if (savedSettings) {
-        this.currentSettings = JSON.parse(savedSettings);
-
-        // questionTypes가 없는 경우 추가
-        if (!this.currentSettings.questionTypes) {
-          this.currentSettings.questionTypes = Array(
-            this.currentSettings.questions.length
-          ).fill("normal");
-        }
-      } else {
-        this.currentSettings = JSON.parse(
-          JSON.stringify(this.originalSettings)
-        );
-      }
-
-      // prompts.js 내용 로드
-      this.loadPrompts();
-    });
-  }
-
-  /**
-   * prompts.js 파일 내용 로드
-   */
-  async loadPrompts() {
     try {
-      const response = await fetch("js/prompts.js");
-      const promptsText = await response.text();
+      const constants = await import("./constants.js");
+      await constants.initSettings(); // 설정 초기화
 
-      // 저장된 커스텀 프롬프트 확인
-      const savedRecommendationPrompt = localStorage.getItem(
-        "customRecommendationPrompt"
-      );
-      const savedNextQuestionPrompt = localStorage.getItem(
-        "customNextQuestionPrompt"
-      );
-
-      if (!this.currentSettings.prompts) {
-        this.currentSettings.prompts = {};
-      }
-
-      // 기본 프롬프트 추출 (간단한 정규식 사용)
-      const recommendationPromptMatch = promptsText.match(
-        /createRecommendationPrompt.*?return\s+`([\s\S]*?)`\s*;/
-      );
-      const nextQuestionPromptMatch = promptsText.match(
-        /createNextQuestionPrompt.*?return\s+`([\s\S]*?)`\s*;/
-      );
-
-      if (recommendationPromptMatch) {
-        this.originalSettings.recommendationPrompt =
-          recommendationPromptMatch[1].trim();
-      } else {
-        // 정규식 매칭 실패 시 기본값 사용
-        this.originalSettings.recommendationPrompt =
-          DEFAULT_RECOMMENDATION_PROMPT.trim();
-      }
-
-      if (nextQuestionPromptMatch) {
-        this.originalSettings.nextQuestionPrompt =
-          nextQuestionPromptMatch[1].trim();
-      } else {
-        // 정규식 매칭 실패 시 기본값 사용
-        this.originalSettings.nextQuestionPrompt =
-          DEFAULT_NEXT_QUESTION_PROMPT.trim();
-      }
-
-      // 저장된 값이 있으면 사용, 없으면 기본값 사용
-      this.currentSettings.prompts.recommendationPrompt =
-        savedRecommendationPrompt || this.originalSettings.recommendationPrompt;
-      this.currentSettings.prompts.nextQuestionPrompt =
-        savedNextQuestionPrompt || this.originalSettings.nextQuestionPrompt;
+      this.originalSettings = constants.getSettings();
+      this.currentSettings = JSON.parse(JSON.stringify(this.originalSettings));
 
       // 현재 열려있는 모달에 값 적용
       if (this.isOpen) {
         this.populateSettings();
       }
     } catch (error) {
-      console.error("프롬프트 파일 로드 실패:", error);
-      // 로드 실패 시 기본값 사용
-      if (!this.originalSettings.recommendationPrompt) {
-        this.originalSettings.recommendationPrompt =
-          DEFAULT_RECOMMENDATION_PROMPT.trim();
-      }
-      if (!this.originalSettings.nextQuestionPrompt) {
-        this.originalSettings.nextQuestionPrompt =
-          DEFAULT_NEXT_QUESTION_PROMPT.trim();
-      }
-
-      if (!this.currentSettings.prompts) {
-        this.currentSettings.prompts = {};
-      }
-      this.currentSettings.prompts.recommendationPrompt =
-        localStorage.getItem("customRecommendationPrompt") ||
-        this.originalSettings.recommendationPrompt;
-      this.currentSettings.prompts.nextQuestionPrompt =
-        localStorage.getItem("customNextQuestionPrompt") ||
-        this.originalSettings.nextQuestionPrompt;
+      console.error("설정 로드 실패:", error);
     }
   }
 
@@ -226,7 +127,7 @@ export class OptionsModal {
     const modalHeader = document.createElement("div");
     modalHeader.className = "modal-header";
     modalHeader.innerHTML = `
-      <h2>설정 커스터마이즈</h2>
+      <h2>설정</h2>
       <button id="close-modal-button" class="close-button">×</button>
     `;
 
@@ -264,10 +165,6 @@ export class OptionsModal {
           <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7">
           <span id="temperature-value">0.7</span>
         </div>
-        <div class="settings-row">
-          <label for="api-endpoint">API Endpoint</label>
-          <input type="text" id="api-endpoint" class="full-width">
-        </div>
       </div>
       
       <div class="tab-content" id="prompts-tab">
@@ -283,21 +180,22 @@ export class OptionsModal {
     const modalFooter = document.createElement("div");
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
-      <button id="reset-button" class="secondary-button">초기화</button>
-      <button id="save-button" class="primary-button">저장</button>
+      <button id="copy-settings" class="secondary-button">현재 설정 복사하기</button>
+      <button id="reset-settings" class="secondary-button">초기화</button>
+      <button id="save-settings" class="primary-button">저장</button>
     `;
 
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(modalBody);
     modalContent.appendChild(modalFooter);
     this.modalContainer.appendChild(modalContent);
-
     document.body.appendChild(this.modalContainer);
 
-    // DOM 요소 참조 저장
+    // 버튼 요소 저장
+    this.saveButton = document.getElementById("save-settings");
+    this.resetButton = document.getElementById("reset-settings");
+    this.copyButton = document.getElementById("copy-settings");
     this.closeButton = document.getElementById("close-modal-button");
-    this.saveButton = document.getElementById("save-button");
-    this.resetButton = document.getElementById("reset-button");
   }
 
   /**
@@ -338,6 +236,9 @@ export class OptionsModal {
     // 초기화 버튼
     this.resetButton.addEventListener("click", () => this.resetSettings());
 
+    // 설정 복사 버튼
+    this.copyButton.addEventListener("click", () => this.copySettings());
+
     // Temperature 슬라이더
     const temperatureSlider = document.getElementById("temperature-slider");
     const temperatureValue = document.getElementById("temperature-value");
@@ -369,6 +270,13 @@ export class OptionsModal {
         DEFAULT_NEXT_QUESTION_PROMPT.trim();
     }
 
+    console.log("모달 열기 - 현재 설정:", JSON.stringify(this.currentSettings));
+    console.log(
+      "모달 열기 - 질문 개수:",
+      this.currentSettings.questions.length
+    );
+    console.log("모달 열기 - 질문 목록:", this.currentSettings.questions);
+
     this.populateSettings();
   }
 
@@ -383,17 +291,22 @@ export class OptionsModal {
   /**
    * 설정 초기값으로 리셋
    */
-  resetSettings() {
+  async resetSettings() {
     if (confirm("모든 설정을 초기값으로 되돌리시겠습니까?")) {
-      localStorage.removeItem("customSettings");
-      localStorage.removeItem("customRecommendationPrompt");
-      localStorage.removeItem("customNextQuestionPrompt");
+      try {
+        const constants = await import("./constants.js");
+        this.currentSettings = await constants.resetSettings();
+        this.originalSettings = JSON.parse(
+          JSON.stringify(this.currentSettings)
+        );
+        this.changedFields.clear();
 
-      this.currentSettings = JSON.parse(JSON.stringify(this.originalSettings));
-      this.changedFields.clear();
-
-      this.populateSettings();
-      alert("모든 설정이 초기화되었습니다.");
+        this.populateSettings();
+        alert("모든 설정이 초기화되었습니다.");
+      } catch (error) {
+        console.error("설정 초기화 실패:", error);
+        alert("설정 초기화 중 오류가 발생했습니다.");
+      }
     }
   }
 
@@ -410,8 +323,6 @@ export class OptionsModal {
       this.currentSettings.temperature;
     document.getElementById("temperature-value").textContent =
       this.currentSettings.temperature;
-    document.getElementById("api-endpoint").value =
-      this.currentSettings.apiEndpoint;
 
     // 프롬프트 설정 탭 데이터 표시
     document.getElementById("recommendation-prompt").value =
@@ -439,6 +350,8 @@ export class OptionsModal {
       this.currentSettings.questions.forEach((question, index) => {
         const questionCard = document.createElement("div");
         questionCard.className = "question-card";
+        // 나중에 카드 개수 확인을 위해 data-index 속성 추가
+        questionCard.setAttribute("data-index", index);
 
         const questionHeader = document.createElement("div");
         questionHeader.className = "question-header";
@@ -794,14 +707,6 @@ export class OptionsModal {
       document.getElementById("temperature-value").classList.remove("changed");
     }
 
-    if (
-      this.currentSettings.apiEndpoint !== this.originalSettings.apiEndpoint
-    ) {
-      document.getElementById("api-endpoint").classList.add("changed");
-    } else {
-      document.getElementById("api-endpoint").classList.remove("changed");
-    }
-
     // 프롬프트 설정
     if (
       this.currentSettings.prompts?.recommendationPrompt !==
@@ -867,16 +772,41 @@ export class OptionsModal {
   }
 
   /**
-   * 설정 저장
+   * 현재 설정을 클립보드에 복사
    */
-  saveSettings() {
+  copySettings() {
+    try {
+      // 저장하기 전에 현재 UI의 값을 가져옴
+      this.updateSettingsFromUI();
+
+      // JSON 형식으로 변환해 클립보드에 복사
+      const settingsJSON = JSON.stringify(this.currentSettings, null, 2);
+      navigator.clipboard
+        .writeText(settingsJSON)
+        .then(() => {
+          alert("현재 설정이 클립보드에 복사되었습니다.");
+        })
+        .catch((err) => {
+          console.error("클립보드 복사 실패:", err);
+          alert("설정 복사에 실패했습니다.");
+        });
+    } catch (error) {
+      console.error("설정 복사 중 오류 발생:", error);
+      alert("설정 복사 중 오류가 발생했습니다.");
+    }
+  }
+
+  /**
+   * UI 값에서 설정 업데이트
+   */
+  updateSettingsFromUI() {
     // 모델 설정 값 가져오기
     this.currentSettings.model = document.getElementById("model-select").value;
     this.currentSettings.temperature = parseFloat(
       document.getElementById("temperature-slider").value
     );
-    this.currentSettings.apiEndpoint =
-      document.getElementById("api-endpoint").value;
+    this.currentSettings.commonDescription =
+      document.getElementById("common-description").value;
 
     // 프롬프트 설정 값 가져오기
     if (!this.currentSettings.prompts) {
@@ -889,36 +819,81 @@ export class OptionsModal {
       "next-question-prompt"
     ).value;
 
-    // 저장하기 전에 원본 질문 데이터도 함께 저장
-    if (this.currentSettings.originalQuestions) {
-      localStorage.setItem(
-        "originalQuestions",
-        JSON.stringify(this.currentSettings.originalQuestions)
+    // 질문 설정 값 가져오기
+    const questions = [];
+    const questionDescriptions = [];
+    const questionTypes = [];
+
+    // 모달 내 모든 질문 카드 요소를 가져옴
+    const questionCards = document.querySelectorAll(".question-card");
+
+    // 각 질문 카드에서 데이터 추출
+    questionCards.forEach((card, index) => {
+      // 질문 텍스트 추출
+      const textInput = card.querySelector(".question-text");
+      if (textInput) {
+        questions[index] = textInput.value;
+      }
+
+      // 질문 설명 추출
+      const descInput = card.querySelector(".question-desc");
+      if (descInput) {
+        questionDescriptions[index] = descInput.value;
+      }
+
+      // 질문 유형 추출
+      const aiRadio = card.querySelector('input[value="ai"]');
+      questionTypes[index] = aiRadio?.checked ? "ai" : "normal";
+    });
+
+    console.log("수집한 질문:", questions);
+    console.log("수집한 설명:", questionDescriptions);
+    console.log("수집한 유형:", questionTypes);
+
+    // 배열에 빈 요소가 있는지 확인하고 정리
+    const cleanQuestions = questions.filter((q) => q !== undefined);
+    const cleanDescriptions = questionDescriptions.filter(
+      (d) => d !== undefined
+    );
+    const cleanTypes = questionTypes.filter((t) => t !== undefined);
+
+    console.log("정리된 질문:", cleanQuestions);
+    console.log("정리된 설명:", cleanDescriptions);
+    console.log("정리된 유형:", cleanTypes);
+
+    this.currentSettings.questions = cleanQuestions;
+    this.currentSettings.questionDescriptions = cleanDescriptions;
+    this.currentSettings.questionTypes = cleanTypes;
+  }
+
+  /**
+   * 설정 저장
+   */
+  async saveSettings() {
+    try {
+      // UI 값에서 설정 업데이트
+      this.updateSettingsFromUI();
+
+      console.log("저장할 설정:", JSON.stringify(this.currentSettings));
+      console.log("질문 개수:", this.currentSettings.questions.length);
+      console.log("질문 목록:", this.currentSettings.questions);
+
+      // constants.js를 통해 설정 저장
+      const constants = await import("./constants.js");
+      await constants.saveSettings(this.currentSettings);
+
+      alert(
+        "설정이 저장되었습니다. 페이지를 새로고침하면 변경사항이 적용됩니다."
       );
-    }
+      this.closeModal();
 
-    // localStorage에 설정 저장
-    localStorage.setItem(
-      "customSettings",
-      JSON.stringify(this.currentSettings)
-    );
-    localStorage.setItem(
-      "customRecommendationPrompt",
-      this.currentSettings.prompts.recommendationPrompt
-    );
-    localStorage.setItem(
-      "customNextQuestionPrompt",
-      this.currentSettings.prompts.nextQuestionPrompt
-    );
-
-    alert(
-      "설정이 저장되었습니다. 페이지를 새로고침하면 변경사항이 적용됩니다."
-    );
-    this.closeModal();
-
-    // 페이지 새로고침 확인
-    if (confirm("지금 페이지를 새로고침하여 변경사항을 적용하시겠습니까?")) {
-      window.location.reload();
+      // 페이지 새로고침 확인
+      if (confirm("지금 페이지를 새로고침하여 변경사항을 적용하시겠습니까?")) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("설정 저장 실패:", error);
+      alert("설정 저장 중 오류가 발생했습니다.");
     }
   }
 }

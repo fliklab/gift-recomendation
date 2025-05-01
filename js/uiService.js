@@ -103,6 +103,15 @@ export class UIService {
     this.questionBox.classList.add("hidden");
     this.resultBox.classList.add("hidden");
     this.loadingSpinner.classList.remove("hidden");
+
+    // 로딩 메시지 요소가 없으면 생성
+    if (!document.getElementById("loading-message")) {
+      const loadingMessage = document.createElement("p");
+      loadingMessage.id = "loading-message";
+      loadingMessage.className = "loading-message";
+      loadingMessage.textContent = "준비 중...";
+      this.loadingSpinner.appendChild(loadingMessage);
+    }
   }
 
   showResult(keywords, descriptions, answers = [], questionAnswerPairs = []) {

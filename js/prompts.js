@@ -1,6 +1,7 @@
 /**
  * 선물 추천 관련 프롬프트 정의
  */
+import { PROMPTS } from "./constants.js";
 
 /**
  * 선물 추천 프롬프트 생성
@@ -9,15 +10,15 @@
  * @returns {string} 생성된 프롬프트
  */
 export function createRecommendationPrompt(answers, questions) {
-  // 사용자 설정된 프롬프트가 있는지 확인
-  const customPrompt = localStorage.getItem("customRecommendationPrompt");
+  // constants.js를 통해 저장된 프롬프트 가져오기
+  const customPrompt = PROMPTS()?.recommendationPrompt;
 
   if (customPrompt) {
     // 템플릿 변수 처리
     return parsePromptTemplate(customPrompt, { answers, questions });
   }
 
-  // 기본 프롬프트 반환
+  // 기본 프롬프트 반환 (이전 버전과의 호환성 유지)
   return `
 당신은 뛰어난 선물 추천 도우미입니다.
 
@@ -49,8 +50,8 @@ ${answers.map((answer, index) => `- ${questions[index]}: ${answer}`).join("\n")}
  * @returns {string} 생성된 프롬프트
  */
 export function createNextQuestionPrompt(previousAnswers, questions) {
-  // 사용자 설정된 프롬프트가 있는지 확인
-  const customPrompt = localStorage.getItem("customNextQuestionPrompt");
+  // constants.js를 통해 저장된 프롬프트 가져오기
+  const customPrompt = PROMPTS()?.nextQuestionPrompt;
 
   if (customPrompt) {
     // 템플릿 변수 처리
@@ -60,7 +61,7 @@ export function createNextQuestionPrompt(previousAnswers, questions) {
     });
   }
 
-  // 기본 프롬프트 반환
+  // 기본 프롬프트 반환 (이전 버전과의 호환성 유지)
   return `
 당신은 뛰어난 선물 추천 도우미입니다.
 
@@ -106,23 +107,37 @@ export function cleanJSONResponse(responseText) {
  * @param {Object} data 치환할 데이터 객체
  * @returns {string} 처리된 프롬프트
  */
-function parsePromptTemplate(template, data) {
+export function parsePromptTemplate(template, data) {
   if (!template) return "";
 
-  // {{현재까지답변}} 형식 처리
-  if (template.includes("{{현재까지답변}}") && data.answers && data.questions) {
-    const answersText = data.answers
-      .map((answer, index) => {
-        const question =
-          index < data.questions.length
-            ? data.questions[index]
-            : `질문 ${index + 1}`;
-        return `- ${question}: ${answer}`;
-      })
-      .join("\n");
+  // 템플릿 처리 최적화
+  let processedTemplate = template;
 
-    return template.replace("{{현재까지답변}}", answersText);
+  // 템플릿 변수 정규식으로 한 번에 찾기
+  const templateVars = template.match(/\{\{([^}]+)\}\}/g) || [];
+
+  // 찾은 모든 변수에 대해 처리
+  for (const variable of templateVars) {
+    const varName = variable.replace(/\{\{|\}\}/g, "");
+
+    // '현재까지답변' 변수 처리
+    if (varName === "현재까지답변" && data.answers && data.questions) {
+      const answersText = data.answers
+        .map((answer, index) => {
+          const question =
+            index < data.questions.length
+              ? data.questions[index]
+              : `질문 ${index + 1}`;
+          return `- ${question}: ${answer}`;
+        })
+        .join("\n");
+
+      processedTemplate = processedTemplate.replace(variable, answersText);
+      continue;
+    }
+
+    // 다른 변수들도 필요하면 여기에 추가 처리
   }
 
-  return template;
+  return processedTemplate;
 }

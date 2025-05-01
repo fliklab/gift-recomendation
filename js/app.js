@@ -1,4 +1,5 @@
 import {
+  initSettings,
   QUESTIONS,
   QUESTION_DESCRIPTIONS,
   QUESTION_CHIPS,
@@ -22,8 +23,11 @@ class GiftRecommender {
     this.optionsModal = new OptionsModal();
   }
 
-  init() {
+  async init() {
     console.log("Initializing...");
+
+    // 설정 초기화
+    await initSettings();
 
     // URL에서 API 키 가져오기
     const urlParams = new URLSearchParams(window.location.search);
@@ -38,13 +42,13 @@ class GiftRecommender {
         this.api = new ApiService(apiKeyFromUrl);
         this.ui.hideApiKeyInput();
 
-        this.currentQuestion = QUESTIONS[this.currentIndex];
+        this.currentQuestion = QUESTIONS()[this.currentIndex];
 
         this.ui.showQuestion(
           this.currentQuestion,
-          QUESTION_DESCRIPTIONS[this.currentIndex],
-          COMMON_DESCRIPTION,
-          QUESTION_CHIPS[this.currentIndex]
+          QUESTION_DESCRIPTIONS()[this.currentIndex],
+          COMMON_DESCRIPTION(),
+          QUESTION_CHIPS()[this.currentIndex]
         );
         this.ui.setSubmitHandler(() => {
           console.log("Submit button clicked");
@@ -103,13 +107,13 @@ class GiftRecommender {
     this.api = new ApiService(apiKey);
     this.ui.hideApiKeyInput();
 
-    this.currentQuestion = QUESTIONS[this.currentIndex];
+    this.currentQuestion = QUESTIONS()[this.currentIndex];
 
     this.ui.showQuestion(
       this.currentQuestion,
-      QUESTION_DESCRIPTIONS[this.currentIndex],
-      COMMON_DESCRIPTION,
-      QUESTION_CHIPS[this.currentIndex]
+      QUESTION_DESCRIPTIONS()[this.currentIndex],
+      COMMON_DESCRIPTION(),
+      QUESTION_CHIPS()[this.currentIndex]
     );
     this.ui.setSubmitHandler(() => {
       console.log("Submit button clicked");
@@ -134,46 +138,47 @@ class GiftRecommender {
 
     this.currentIndex++;
 
-    if (this.currentIndex < QUESTIONS.length) {
+    if (this.currentIndex < QUESTIONS().length) {
       // 현재 질문의 유형 확인
+      const questionTypes = QUESTION_TYPES();
       const currentQuestionType =
-        QUESTION_TYPES && QUESTION_TYPES[this.currentIndex]
-          ? QUESTION_TYPES[this.currentIndex]
+        questionTypes && questionTypes[this.currentIndex]
+          ? questionTypes[this.currentIndex]
           : "normal";
 
       // AI 맞춤형 질문 여부
       const isAIQuestion = currentQuestionType === "ai";
 
       // AI 맞춤형 질문이거나 4번째 질문 이상인 경우 (기존 로직 호환성 유지)
-      if (isAIQuestion || this.currentIndex >= 3) {
+      if (isAIQuestion) {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
           this.currentQuestion = nextQuestion.question;
           this.ui.showQuestion(
             this.currentQuestion,
             nextQuestion.description,
-            COMMON_DESCRIPTION,
+            COMMON_DESCRIPTION(),
             nextQuestion.chips
           );
         } catch (error) {
           console.error("다음 질문 생성 실패:", error);
           // 실패 시 기본 질문으로 폴백
-          this.currentQuestion = QUESTIONS[this.currentIndex];
+          this.currentQuestion = QUESTIONS()[this.currentIndex];
           this.ui.showQuestion(
             this.currentQuestion,
-            QUESTION_DESCRIPTIONS[this.currentIndex],
-            COMMON_DESCRIPTION,
-            QUESTION_CHIPS[this.currentIndex]
+            QUESTION_DESCRIPTIONS()[this.currentIndex],
+            COMMON_DESCRIPTION(),
+            QUESTION_CHIPS()[this.currentIndex]
           );
         }
       } else {
         // 일반 질문 처리 (미리 정의된 질문 사용)
-        this.currentQuestion = QUESTIONS[this.currentIndex];
+        this.currentQuestion = QUESTIONS()[this.currentIndex];
         this.ui.showQuestion(
           this.currentQuestion,
-          QUESTION_DESCRIPTIONS[this.currentIndex],
-          COMMON_DESCRIPTION,
-          QUESTION_CHIPS[this.currentIndex]
+          QUESTION_DESCRIPTIONS()[this.currentIndex],
+          COMMON_DESCRIPTION(),
+          QUESTION_CHIPS()[this.currentIndex]
         );
       }
     } else {
@@ -184,13 +189,49 @@ class GiftRecommender {
   async getRecommendations() {
     try {
       this.ui.showLoading();
+      console.time("추천 프로세스 총 시간");
+
+      // 로딩 메시지 업데이트 함수
+      const updateLoadingMessage = (message) => {
+        const loadingMessage = document.querySelector("#loading-message");
+        if (loadingMessage) {
+          loadingMessage.textContent = message;
+        }
+      };
+
+      // 로딩 단계별 메시지 표시
+      const steps = [
+        "AI 모델에 질문 전송 중...",
+        "맞춤형 선물 추천 생성 중...",
+        "결과 데이터 정리 중...",
+        "추천 결과 준비 완료!",
+      ];
+
+      let currentStep = 0;
+      updateLoadingMessage(steps[currentStep]);
+
+      // 주기적으로 로딩 메시지 업데이트
+      const loadingInterval = setInterval(() => {
+        currentStep = (currentStep + 1) % (steps.length - 1);
+        updateLoadingMessage(steps[currentStep]);
+      }, 3500);
+
       const result = await this.api.getGiftRecommendations(this.answers);
-      this.ui.showResult(
-        result.keywords,
-        result.descriptions,
-        this.answers,
-        this.questionAnswerPairs
-      );
+
+      // 로딩 메시지 업데이트 중지
+      clearInterval(loadingInterval);
+      updateLoadingMessage(steps[steps.length - 1]);
+
+      // 잠시 대기 후 결과 표시 (사용자가 완료 메시지를 볼 수 있도록)
+      setTimeout(() => {
+        console.timeEnd("추천 프로세스 총 시간");
+        this.ui.showResult(
+          result.keywords,
+          result.descriptions,
+          this.answers,
+          this.questionAnswerPairs
+        );
+      }, 1000);
     } catch (error) {
       console.error("추천 받기 실패:", error);
       this.ui.showError(
