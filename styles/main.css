@@ -1,6 +1,7 @@
 :root {
   --primary-color: #4a90e2;
   --secondary-color: #f5f5f5;
+  --white-color: #fff;
   --text-color: #333;
   --border-radius: 8px;
   --mobile-padding: 1rem;
@@ -17,15 +18,17 @@ body {
   font-family: "Arial", sans-serif;
   line-height: 1.6;
   color: var(--text-color);
-  background-color: var(--secondary-color);
-  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--white-color);
 }
 
 .container {
-  max-width: 800px;
+  background-color: var(--secondary-color);
+  max-width: 640px;
   margin: 0 auto;
   padding: var(--mobile-padding);
   position: relative;
+  min-height: 100dvh;
 }
 
 @media (min-width: 768px) {

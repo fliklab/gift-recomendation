@@ -475,19 +475,25 @@ export class OptionsModal {
             hintElement.classList.remove("hidden");
             textInput.disabled = true;
             textRow.classList.add("ai-mode");
+
+            // 질문 텍스트 필드 숨기기 (가려주기)
+            textRow.classList.add("hidden");
+
             descRow.classList.add("hidden");
             chipsEditor.classList.add("hidden");
 
-            // AI 맞춤형 질문 선택 시 기본 텍스트 표시
+            // AI 맞춤형 질문 선택 시 기본 텍스트 표시하지 않음
+            // 원래 값을 저장만 하고 덮어쓰지 않음
             if (!textInput.getAttribute("data-original-value")) {
               textInput.setAttribute("data-original-value", textInput.value);
             }
-            textInput.value = "AI가 동적으로 생성하는 질문";
+            // 텍스트 입력값을 변경하지 않음 (비워두지 않음)
           } else {
             // 일반 모드로 전환 시
             hintElement.classList.add("hidden");
             textInput.disabled = false;
             textRow.classList.remove("ai-mode");
+            textRow.classList.remove("hidden");
             descRow.classList.remove("hidden");
             chipsEditor.classList.remove("hidden");
 
@@ -512,9 +518,8 @@ export class OptionsModal {
             this.currentSettings.originalQuestions[qIndex] =
               this.currentSettings.questions[qIndex];
 
-            // 표시용 텍스트로 변경
-            this.currentSettings.questions[qIndex] =
-              "AI가 동적으로 생성하는 질문";
+            // 값을 비워두지 않고 원래 값을 유지
+            // this.currentSettings.questions[qIndex] = "";
           } else if (
             this.currentSettings.originalQuestions &&
             this.currentSettings.originalQuestions[qIndex]
