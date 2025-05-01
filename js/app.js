@@ -204,6 +204,8 @@ class GiftRecommender {
         if (loadingMessage) {
           loadingMessage.textContent = message;
         }
+        // 진행 상태 텍스트 업데이트 추가
+        this.ui.updateProgressText(message);
       };
 
       // 로딩 단계별 메시지 표시
@@ -217,8 +219,8 @@ class GiftRecommender {
       let currentStep = 0;
       updateLoadingMessage(steps[currentStep]);
 
-      // 주기적으로 로딩 메시지 업데이트
-      const loadingInterval = setInterval(() => {
+      // 주기적으로 로딩 메시지 업데이트 (클래스 멤버 변수에 저장)
+      this.loadingInterval = setInterval(() => {
         currentStep = (currentStep + 1) % (steps.length - 1);
         updateLoadingMessage(steps[currentStep]);
       }, 3500);
@@ -226,7 +228,8 @@ class GiftRecommender {
       const result = await this.api.getGiftRecommendations(this.answers);
 
       // 로딩 메시지 업데이트 중지
-      clearInterval(loadingInterval);
+      clearInterval(this.loadingInterval);
+      this.loadingInterval = null; // 참조 제거
       updateLoadingMessage(steps[steps.length - 1]);
 
       // 잠시 대기 후 결과 표시 (사용자가 완료 메시지를 볼 수 있도록)
@@ -242,6 +245,15 @@ class GiftRecommender {
       }, 1000);
     } catch (error) {
       console.error("추천 받기 실패:", error);
+
+      // 로딩 인터벌 제거 (오류 발생 시에도 인터벌 정리)
+      if (this.loadingInterval) {
+        clearInterval(this.loadingInterval);
+        this.loadingInterval = null; // 참조 제거
+      }
+
+      // 에러 메시지 표시
+      this.ui.updateProgressText("오류 발생");
       this.ui.showError(
         "선물 추천을 받는 중 오류가 발생했습니다. 다시 시도해주세요."
       );

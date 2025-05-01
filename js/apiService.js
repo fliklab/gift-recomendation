@@ -110,6 +110,11 @@ export class ApiService {
       return JSON.parse(cleaned);
     } catch (error) {
       console.error("API 호출 중 오류 발생:", error);
+      console.error("오류 세부 정보:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       throw new Error(`선물 추천을 가져오는데 실패했습니다: ${error.message}`);
     }
   }
@@ -144,6 +149,11 @@ export class ApiService {
       return JSON.parse(cleaned);
     } catch (error) {
       console.error("다음 질문 생성 중 오류 발생:", error);
+      console.error("오류 세부 정보:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       throw new Error(
         "다음 질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
       );

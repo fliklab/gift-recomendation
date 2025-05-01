@@ -71,6 +71,7 @@ export class UIService {
     this.answerInput.value = "";
     this.answerInput.disabled = false;
     this.submitButton.classList.remove("loading");
+    this.submitButton.textContent = "제출하기";
     this.answerInput.focus();
     this.renderChips(chips || []);
   }
@@ -111,6 +112,16 @@ export class UIService {
       loadingMessage.className = "loading-message";
       loadingMessage.textContent = "준비 중...";
       this.loadingSpinner.appendChild(loadingMessage);
+    }
+  }
+
+  updateProgressText(text) {
+    this.submitButton.textContent = text;
+
+    // 로딩 메시지도 업데이트
+    const loadingMessage = document.querySelector("#loading-message");
+    if (loadingMessage) {
+      loadingMessage.textContent = text;
     }
   }
 
@@ -283,6 +294,8 @@ export class UIService {
         <button onclick="window.location.reload()">다시 시도하기</button>
       </div>
     `;
+    // 에러 발생 시 버튼 텍스트 초기화
+    this.submitButton.textContent = "제출하기";
   }
 
   getAnswer() {
@@ -293,6 +306,7 @@ export class UIService {
     this.submitButton.addEventListener("click", () => {
       this.answerInput.disabled = true;
       this.submitButton.classList.add("loading");
+      this.submitButton.textContent = "처리 중...";
       handler();
     });
 
@@ -300,6 +314,7 @@ export class UIService {
       if (e.key === "Enter") {
         this.answerInput.disabled = true;
         this.submitButton.classList.add("loading");
+        this.submitButton.textContent = "처리 중...";
         handler();
       }
     });
