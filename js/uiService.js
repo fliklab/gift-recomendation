@@ -1,3 +1,5 @@
+import { QUESTIONS } from "./constants.js";
+
 export class UIService {
   constructor() {
     console.log("UIService initialized");
@@ -103,7 +105,7 @@ export class UIService {
     this.loadingSpinner.classList.remove("hidden");
   }
 
-  showResult(keywords, descriptions, answers = []) {
+  showResult(keywords, descriptions, answers = [], questionAnswerPairs = []) {
     this.questionBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
     this.resultBox.classList.remove("hidden");
@@ -156,6 +158,15 @@ export class UIService {
       // 가격대 정보 파싱 실패 시 무시하고 진행
     }
 
+    // questionAnswerPairs가 비어 있으면 QUESTIONS와 answers에서 생성
+    if (questionAnswerPairs.length === 0 && answers.length > 0) {
+      questionAnswerPairs = answers.map((answer, index) => {
+        const question =
+          index < QUESTIONS.length ? QUESTIONS[index] : `질문 ${index + 1}`;
+        return { question, answer };
+      });
+    }
+
     this.resultBox.innerHTML = `
       <h2>🎁 추천 키워드</h2>
       <div class="recommendations">
@@ -177,8 +188,61 @@ export class UIService {
           )
           .join("")}
       </div>
+      
+      <div class="summary-box">
+        <h3>🔍 추천 결과 요약</h3>
+        <div class="summary-content" id="summary-content">
+          <h4>📋 질문 및 답변</h4>
+          ${
+            questionAnswerPairs.length > 0
+              ? questionAnswerPairs
+                  .map(
+                    (pair) =>
+                      `<p><strong>${pair.question}</strong>: ${pair.answer}</p>`
+                  )
+                  .join("")
+              : "<p>질문 및 답변 데이터가 없습니다.</p>"
+          }
+          
+          <h4>💡 추천 키워드</h4>
+          ${keywords
+            .map(
+              (word, index) =>
+                `<p><strong>${word}</strong>: ${descriptions[index]}</p>`
+            )
+            .join("")}
+        </div>
+        <button class="copy-btn" id="copy-summary-btn">복사하기</button>
+      </div>
+      
       <button class="restart-btn" onclick="window.location.reload()">다시 시작하기</button>
     `;
+
+    // 복사 버튼 기능 추가
+    document
+      .getElementById("copy-summary-btn")
+      .addEventListener("click", () => {
+        // 복사할 텍스트 생성
+        let summaryText = "📋 질문 및 답변\n";
+        questionAnswerPairs.forEach((pair) => {
+          summaryText += `${pair.question}: ${pair.answer}\n`;
+        });
+
+        summaryText += "\n💡 추천 키워드\n";
+        keywords.forEach((word, index) => {
+          summaryText += `${word}: ${descriptions[index]}\n`;
+        });
+
+        navigator.clipboard
+          .writeText(summaryText)
+          .then(() => {
+            alert("복사되었습니다!");
+          })
+          .catch((err) => {
+            console.error("복사 실패:", err);
+            alert("복사에 실패했습니다.");
+          });
+      });
   }
 
   showError(message) {

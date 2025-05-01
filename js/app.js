@@ -13,6 +13,8 @@ class GiftRecommender {
     this.ui = new UIService();
     this.currentIndex = 0;
     this.answers = [];
+    this.questionAnswerPairs = [];
+    this.currentQuestion = "";
   }
 
   init() {
@@ -30,8 +32,11 @@ class GiftRecommender {
         console.log("API key is valid");
         this.api = new ApiService(apiKeyFromUrl);
         this.ui.hideApiKeyInput();
+
+        this.currentQuestion = QUESTIONS[this.currentIndex];
+
         this.ui.showQuestion(
-          QUESTIONS[this.currentIndex],
+          this.currentQuestion,
           QUESTION_DESCRIPTIONS[this.currentIndex],
           COMMON_DESCRIPTION,
           QUESTION_CHIPS[this.currentIndex]
@@ -92,8 +97,11 @@ class GiftRecommender {
 
     this.api = new ApiService(apiKey);
     this.ui.hideApiKeyInput();
+
+    this.currentQuestion = QUESTIONS[this.currentIndex];
+
     this.ui.showQuestion(
-      QUESTIONS[this.currentIndex],
+      this.currentQuestion,
       QUESTION_DESCRIPTIONS[this.currentIndex],
       COMMON_DESCRIPTION,
       QUESTION_CHIPS[this.currentIndex]
@@ -113,13 +121,20 @@ class GiftRecommender {
     }
 
     this.answers.push(answer);
+
+    this.questionAnswerPairs.push({
+      question: this.currentQuestion,
+      answer: answer,
+    });
+
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS.length) {
       // 처음 3개 질문은 OpenAI를 사용하지 않음
       if (this.currentIndex < 3) {
+        this.currentQuestion = QUESTIONS[this.currentIndex];
         this.ui.showQuestion(
-          QUESTIONS[this.currentIndex],
+          this.currentQuestion,
           QUESTION_DESCRIPTIONS[this.currentIndex],
           COMMON_DESCRIPTION,
           QUESTION_CHIPS[this.currentIndex]
@@ -127,8 +142,9 @@ class GiftRecommender {
       } else {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
+          this.currentQuestion = nextQuestion.question;
           this.ui.showQuestion(
-            nextQuestion.question,
+            this.currentQuestion,
             nextQuestion.description,
             COMMON_DESCRIPTION,
             nextQuestion.chips
@@ -136,8 +152,9 @@ class GiftRecommender {
         } catch (error) {
           console.error("다음 질문 생성 실패:", error);
           // 실패 시 기본 질문으로 폴백
+          this.currentQuestion = QUESTIONS[this.currentIndex];
           this.ui.showQuestion(
-            QUESTIONS[this.currentIndex],
+            this.currentQuestion,
             QUESTION_DESCRIPTIONS[this.currentIndex],
             COMMON_DESCRIPTION,
             QUESTION_CHIPS[this.currentIndex]
@@ -153,7 +170,12 @@ class GiftRecommender {
     try {
       this.ui.showLoading();
       const result = await this.api.getGiftRecommendations(this.answers);
-      this.ui.showResult(result.keywords, result.descriptions, this.answers);
+      this.ui.showResult(
+        result.keywords,
+        result.descriptions,
+        this.answers,
+        this.questionAnswerPairs
+      );
     } catch (error) {
       console.error("추천 받기 실패:", error);
       this.ui.showError(
