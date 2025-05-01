@@ -2,10 +2,12 @@ import {
   QUESTIONS,
   QUESTION_DESCRIPTIONS,
   QUESTION_CHIPS,
+  QUESTION_TYPES,
   COMMON_DESCRIPTION,
 } from "./constants.js";
 import { ApiService } from "./apiService.js";
 import { UIService } from "./uiService.js";
+import { OptionsModal } from "./optionsModal.js";
 
 class GiftRecommender {
   constructor() {
@@ -15,6 +17,9 @@ class GiftRecommender {
     this.answers = [];
     this.questionAnswerPairs = [];
     this.currentQuestion = "";
+
+    // 옵션 모달 초기화
+    this.optionsModal = new OptionsModal();
   }
 
   init() {
@@ -130,16 +135,17 @@ class GiftRecommender {
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS.length) {
-      // 처음 3개 질문은 OpenAI를 사용하지 않음
-      if (this.currentIndex < 3) {
-        this.currentQuestion = QUESTIONS[this.currentIndex];
-        this.ui.showQuestion(
-          this.currentQuestion,
-          QUESTION_DESCRIPTIONS[this.currentIndex],
-          COMMON_DESCRIPTION,
-          QUESTION_CHIPS[this.currentIndex]
-        );
-      } else {
+      // 현재 질문의 유형 확인
+      const currentQuestionType =
+        QUESTION_TYPES && QUESTION_TYPES[this.currentIndex]
+          ? QUESTION_TYPES[this.currentIndex]
+          : "normal";
+
+      // AI 맞춤형 질문 여부
+      const isAIQuestion = currentQuestionType === "ai";
+
+      // AI 맞춤형 질문이거나 4번째 질문 이상인 경우 (기존 로직 호환성 유지)
+      if (isAIQuestion || this.currentIndex >= 3) {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
           this.currentQuestion = nextQuestion.question;
@@ -160,6 +166,15 @@ class GiftRecommender {
             QUESTION_CHIPS[this.currentIndex]
           );
         }
+      } else {
+        // 일반 질문 처리 (미리 정의된 질문 사용)
+        this.currentQuestion = QUESTIONS[this.currentIndex];
+        this.ui.showQuestion(
+          this.currentQuestion,
+          QUESTION_DESCRIPTIONS[this.currentIndex],
+          COMMON_DESCRIPTION,
+          QUESTION_CHIPS[this.currentIndex]
+        );
       }
     } else {
       await this.getRecommendations();
