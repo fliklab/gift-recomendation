@@ -11,6 +11,7 @@ import {
 import { ApiService } from "./apiService.js";
 import { UIService } from "./uiService.js";
 import { OptionsModal } from "./optionsModal.js";
+import { calculateCost, convertUSDToKRW } from "./utils/costUtils.js";
 
 class GiftRecommender {
   constructor() {
@@ -20,6 +21,7 @@ class GiftRecommender {
     this.answers = [];
     this.questionAnswerPairs = [];
     this.currentQuestion = "";
+    this.totalTokens = 0; // API 호출 토큰 누적 합계 저장
 
     // 옵션 모달 초기화
     this.optionsModal = new OptionsModal();
@@ -155,6 +157,8 @@ class GiftRecommender {
       if (isAIQuestion) {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
+          // 다음 질문 생성 API 토큰 사용량 누적
+          this.totalTokens += nextQuestion.usage?.total_tokens || 0;
           this.currentQuestion = nextQuestion.question;
 
           // AI 맞춤형 질문인 경우 UI에 질문 필드를 숨기고 설명만 표시
@@ -226,6 +230,8 @@ class GiftRecommender {
       }, 3500);
 
       const result = await this.api.getGiftRecommendations(this.answers);
+      // 최종 추천 API 토큰 사용량 누적
+      this.totalTokens += result.usage?.total_tokens || 0;
 
       // 로딩 메시지 업데이트 중지
       clearInterval(this.loadingInterval);
@@ -235,12 +241,17 @@ class GiftRecommender {
       // 잠시 대기 후 결과 표시 (사용자가 완료 메시지를 볼 수 있도록)
       setTimeout(() => {
         console.timeEnd("추천 프로세스 총 시간");
+        // 예상 비용 계산
+        const cost = calculateCost(MODEL(), this.totalTokens);
+        const costInKRW = convertUSDToKRW(cost);
         this.ui.showResult(
           result.keywords,
           result.descriptions,
           this.answers,
           this.questionAnswerPairs,
-          `${MODEL()}(temperature:${TEMPERATURE()})`
+          `${MODEL()}(temperature:${TEMPERATURE()})`,
+          this.totalTokens,
+          `${cost} USD, 약 ${costInKRW}원`
         );
       }, 1000);
     } catch (error) {

@@ -107,7 +107,9 @@ export class ApiService {
 
       const content = data.choices[0].message.content;
       const cleaned = cleanJSONResponse(content);
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
+      parsed.usage = data.usage;
+      return parsed;
     } catch (error) {
       console.error("API 호출 중 오류 발생:", error);
       console.error("오류 세부 정보:", {
@@ -146,7 +148,9 @@ export class ApiService {
 
       const content = data.choices[0].message.content;
       const cleaned = cleanJSONResponse(content);
-      return JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
+      parsed.usage = data.usage;
+      return parsed;
     } catch (error) {
       console.error("다음 질문 생성 중 오류 발생:", error);
       console.error("오류 세부 정보:", {

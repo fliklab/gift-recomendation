@@ -130,7 +130,9 @@ export class UIService {
     descriptions,
     answers = [],
     questionAnswerPairs = [],
-    modelInfo
+    modelInfo,
+    totalTokens,
+    cost
   ) {
     this.questionBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
@@ -241,6 +243,12 @@ export class UIService {
             
           <h4>🤖 모델 정보</h4>
           <p>${modelInfo || "모델 정보가 없습니다."}</p>
+          <h4>🧮 토큰 사용량</h4>
+          <p>${
+            totalTokens != null ? totalTokens + "개" : "토큰 정보가 없습니다."
+          }</p>
+          <h4>💰 예상 비용</h4>
+          <p>${cost != null ? cost : "비용 정보가 없습니다."}</p>
           
         </div>
         <button class="copy-btn" id="copy-summary-btn">복사하기</button>
@@ -269,6 +277,14 @@ export class UIService {
         if (modelInfo) {
           summaryText += "🤖 모델 정보\n";
           summaryText += `${modelInfo}\n\n`;
+        }
+        if (typeof totalTokens === "number") {
+          summaryText += "🧮 토큰 사용량\n";
+          summaryText += `${totalTokens}개\n\n`;
+        }
+        if (typeof cost === "number") {
+          summaryText += "💰 예상 비용\n";
+          summaryText += `${cost.toFixed(4)} USD\n\n`;
         }
 
         navigator.clipboard
