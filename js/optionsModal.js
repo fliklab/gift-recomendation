@@ -160,11 +160,18 @@ export class OptionsModal {
             <option value="gpt-4-turbo">GPT-4-turbo</option>
           </select>
         </div>
+        <p class="help-text">모델별 특징 및 비용<br>
+          - GPT-3.5-turbo: 빠르고 저렴 (1,000토큰당 $0.0015)<br>
+          - GPT-4o-mini: 균형 잡힌 성능과 비용 (1,000토큰당 $0.0020)<br>
+          - GPT-4: 최고 성능, 비용 높음 (1,000토큰당 약 $0.03)<br>
+          - GPT-4-turbo: GPT-4 유사 성능, 빠르고 다소 저렴 (1,000토큰당 약 $0.03)
+        </p>
         <div class="settings-row">
           <label for="temperature-slider">Temperature</label>
           <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7">
           <span id="temperature-value">0.7</span>
         </div>
+        <p class="help-text">Tempertature가 높을수록 더 창의적이고 다양한 답변을 생성합니다. 일반적으로 1 이하를 권장합니다.</p>
       </div>
       
       <div class="tab-content" id="prompts-tab">
