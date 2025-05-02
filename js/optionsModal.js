@@ -1,55 +1,4 @@
 /**
- * 선물 추천 관련 기본 프롬프트
- */
-const DEFAULT_RECOMMENDATION_PROMPT = `
-  // Start of Selection
-현재까지의 질문과 답변을 토대로, "선물 키워드" 4개를 다정한 반말로 추천해줘.
-ex. 샤넬 지갑, 디올 어딕트 립글로우, 캐주얼 카드지갑, 애플 에어팟
-- 키워드는 취향, 취미, 관심사 등 사용자의 취향을 반영하되 브랜드명이나, 카테고리 등을 포함한 구체적인 검색 키워드로 작성
-- 선물 대상과 상황을 고려해서 현실성 있게 추천
-- 이전 답변들을 바탕으로 개인화된 추천 제공
-- 각 키워드에 대하여 친구처럼 다정한 반말로 간단한 설명 추가
-  - 사용자가 입력한 내용을 바탕으로 왜 그 선물이 매력적인지 알 수 있는 한줄평이어야 해줘.
-  - 센스 넘치고 귀여운 말투와 이모티콘까지!!
-  - 예: "음악을 좋아하는 여자친구라면 무조건 좋아할거야!😄"
-
-사용자 정보:
-{{현재까지답변}}
-
-결과는 다음 JSON 형식으로 출력해주세요:
-{
-  "keywords": ["키워드1", "키워드2", "키워드3", "키워드4"],
-  "descriptions": ["설명1", "설명2", "설명3", "설명4"]
-}
-`;
-
-/**
- * 다음 질문 관련 기본 프롬프트
- */
-const DEFAULT_NEXT_QUESTION_PROMPT = `
-당신은 선물을 추천하는 귀여운 고양이!
-
-지금까지 수집된 사용자 정보를 바탕으로, 다음 질문과 선택지를 생성해주세요.
-- 질문은 이모티콘을 좋아하고 친구같은 반말 말투, 포근하고 다정한 분위기!
-- 왜 선물을 하려는지, 선물할 때 고민되는 점은 뭔지, 사용자의 감정과 맥락을 고려한 질문.
-- 선택지는 4-6개 정도로 제한
-- 이전 답변을 고려하여 개인화된 선택지 제공
-- 중복 질문은 피하기
-- 선택지는 간결한 표현을 사용하되, 후반에는 좀더 구체적이고 현실적인 예시로 구성
-- 선물 이유, 가격대 등이 파악되어야 함.
-
-지금까지의 답변:
-{{현재까지답변}}
-
-결과는 다음 JSON 형식으로 출력해주세요:
-{
-  "question": "다음 질문",
-  "description": "질문에 대한 설명",
-  "chips": ["선택지1", "선택지2", ...]
-}
-`;
-
-/**
  * 옵션 설정 모달 관리 클래스
  */
 export class OptionsModal {
@@ -260,29 +209,7 @@ export class OptionsModal {
   openModal() {
     this.isOpen = true;
     this.modalContainer.classList.remove("hidden");
-
-    // 기본값 설정 (프롬프트가 아직 로드되지 않았을 경우 대비)
-    if (!this.currentSettings.prompts) {
-      this.currentSettings.prompts = {};
-    }
-
-    if (!this.currentSettings.prompts.recommendationPrompt) {
-      this.currentSettings.prompts.recommendationPrompt =
-        DEFAULT_RECOMMENDATION_PROMPT.trim();
-    }
-
-    if (!this.currentSettings.prompts.nextQuestionPrompt) {
-      this.currentSettings.prompts.nextQuestionPrompt =
-        DEFAULT_NEXT_QUESTION_PROMPT.trim();
-    }
-
-    console.log("모달 열기 - 현재 설정:", JSON.stringify(this.currentSettings));
-    console.log(
-      "모달 열기 - 질문 개수:",
-      this.currentSettings.questions.length
-    );
-    console.log("모달 열기 - 질문 목록:", this.currentSettings.questions);
-
+    // JSON 설정값을 그대로 사용하여 UI에 표시합니다
     this.populateSettings();
   }
 
