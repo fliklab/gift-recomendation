@@ -872,6 +872,50 @@ export class OptionsModal {
   }
 
   /**
+   * JSON 파일 불러오기
+   */
+  importJSONFile() {
+    FileImporter.importJSONFile((jsonContent) => {
+      try {
+        const settings = JSON.parse(jsonContent);
+
+        // 설정 유효성 검사
+        if (!this.validateSettings(settings)) {
+          alert("유효하지 않은 설정 파일입니다. 필수 필드가 누락되었습니다.");
+          return;
+        }
+
+        // 현재 날짜와 시간 가져오기
+        const now = new Date();
+        const dateStr = now.toISOString().split("T")[0].replace(/-/g, "");
+        const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "");
+
+        // 리스트에 추가할 데이터 준비
+        const settingsToAdd = {
+          ...settings,
+          id: this.generateUniqueId(),
+          isLocal: true,
+          title: settings.title || `새로운 설정 ${dateStr}_${timeStr}`,
+          author: settings.author || "사용자",
+          createdAt: now.toISOString().split("T")[0],
+        };
+
+        // 로컬스토리지에 저장
+        if (this.saveToLocalStorage(settingsToAdd)) {
+          alert("설정이 리스트에 추가되었습니다.");
+          // 파일 목록 새로고침
+          this.loadAndDisplayFileList();
+        } else {
+          alert("설정 추가에 실패했습니다.");
+        }
+      } catch (error) {
+        console.error("JSON 파일 파싱 실패:", error);
+        alert("잘못된 JSON 형식입니다.");
+      }
+    });
+  }
+
+  /**
    * 파일 선택 모달 열기
    */
   openFileSelectModal() {
@@ -881,7 +925,7 @@ export class OptionsModal {
     fileSelectModal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h2>설정 파일 선택</h2>
+          <h2>설정 파일 선택 리스트</h2>
           <button class="close-button">×</button>
         </div>
         <div class="modal-body">
@@ -928,21 +972,10 @@ export class OptionsModal {
 
     importJSONButton.addEventListener("click", () => {
       this.importJSONFile();
-      closeFileSelectModal();
     });
 
     // 파일 목록 로드 및 표시
     this.loadAndDisplayFileList();
-  }
-
-  /**
-   * JSON 파일 불러오기
-   */
-  importJSONFile() {
-    FileImporter.importJSONFile((jsonContent) => {
-      // JSON 입력 모달 열기
-      this.openPasteModal(jsonContent);
-    });
   }
 
   /**
@@ -1254,7 +1287,10 @@ export class OptionsModal {
           <div class="file-actions">
             ${
               file.isLocal
-                ? `<button class="delete-file-button" data-id="${file.id}">삭제</button>`
+                ? `
+                  <button class="export-file-button" data-id="${file.id}">내보내기</button>
+                  <button class="delete-file-button" data-id="${file.id}">삭제</button>
+                `
                 : ""
             }
           </div>
@@ -1272,6 +1308,14 @@ export class OptionsModal {
             .addEventListener("click", (e) => {
               e.stopPropagation();
               this.deleteFromLocalStorage(file.id);
+            });
+
+          // 내보내기 버튼 이벤트
+          fileItem
+            .querySelector(".export-file-button")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              this.exportFile(file);
             });
         }
 
@@ -1458,6 +1502,41 @@ export class OptionsModal {
         console.error("설정 삭제 실패:", error);
         alert("설정 삭제에 실패했습니다.");
       }
+    }
+  }
+
+  /**
+   * 설정 파일 내보내기
+   */
+  exportFile(file) {
+    try {
+      // 로컬스토리지에서 설정 가져오기
+      const savedSettings = JSON.parse(
+        localStorage.getItem("savedSettings") || "[]"
+      );
+      const settings = savedSettings.find((s) => s.id === file.id);
+
+      if (!settings) {
+        throw new Error("설정을 찾을 수 없습니다.");
+      }
+
+      // 파일로 저장
+      const blob = new Blob([JSON.stringify(settings, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${file.title.replace(/\s+/g, "_")}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert("설정이 파일로 저장되었습니다.");
+    } catch (error) {
+      console.error("설정 내보내기 실패:", error);
+      alert("설정 내보내기에 실패했습니다.");
     }
   }
 }
@@ -1843,7 +1922,7 @@ input:disabled {
 
 .file-list-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   padding: 10px 15px;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
@@ -1863,6 +1942,7 @@ input:disabled {
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
   transition: background-color 0.2s;
+  
 }
 
 .file-list-item:hover {
@@ -1916,6 +1996,23 @@ input:disabled {
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.2s;
+}
+
+.export-file-button {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-right: 8px;
+}
+
+.export-file-button:hover {
+  background-color: #d2e3fc;
 }
 
 .delete-file-button:hover {
