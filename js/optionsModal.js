@@ -135,6 +135,7 @@ export class OptionsModal {
     const modalFooter = document.createElement("div");
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
+      <button id="paste-json-settings" class="secondary-button">JSON에서 붙여넣기</button>
       <button id="copy-settings" class="secondary-button">현재 설정 복사하기</button>
       <button id="reset-settings" class="secondary-button">초기화</button>
       <button id="save-settings" class="primary-button">저장</button>
@@ -148,6 +149,7 @@ export class OptionsModal {
 
     // 버튼 요소 저장
     this.saveButton = document.getElementById("save-settings");
+    this.pasteJSONButton = document.getElementById("paste-json-settings");
     this.resetButton = document.getElementById("reset-settings");
     this.copyButton = document.getElementById("copy-settings");
     this.closeButton = document.getElementById("close-modal-button");
@@ -193,6 +195,9 @@ export class OptionsModal {
 
     // 설정 복사 버튼
     this.copyButton.addEventListener("click", () => this.copySettings());
+
+    // JSON 붙여넣기 버튼
+    this.pasteJSONButton.addEventListener("click", () => this.openPasteModal());
 
     // Temperature 슬라이더
     const temperatureSlider = document.getElementById("temperature-slider");
@@ -834,6 +839,160 @@ export class OptionsModal {
       alert("설정 저장 중 오류가 발생했습니다.");
     }
   }
+
+  /**
+   * JSON 붙여넣기 모달 열기
+   */
+  openPasteModal() {
+    const pasteModal = document.createElement("div");
+    pasteModal.id = "paste-json-modal";
+    pasteModal.className = "modal-container";
+    pasteModal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>JSON 설정 붙여넣기</h2>
+          <button class="close-button">×</button>
+        </div>
+        <div class="modal-body">
+          <textarea id="paste-json-textarea" class="full-width" rows="15" placeholder="JSON 설정을 붙여넣어주세요..."></textarea>
+          <div id="json-validation-message" class="validation-message"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-paste" class="secondary-button">취소</button>
+          <button id="confirm-paste" class="primary-button" disabled>저장</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(pasteModal);
+
+    // 이벤트 리스너 설정
+    const closeButton = pasteModal.querySelector(".close-button");
+    const cancelButton = pasteModal.querySelector("#cancel-paste");
+    const confirmButton = pasteModal.querySelector("#confirm-paste");
+    const textarea = pasteModal.querySelector("#paste-json-textarea");
+    const validationMessage = pasteModal.querySelector(
+      "#json-validation-message"
+    );
+
+    const closePasteModal = () => {
+      document.body.removeChild(pasteModal);
+    };
+
+    closeButton.addEventListener("click", closePasteModal);
+    cancelButton.addEventListener("click", closePasteModal);
+
+    // JSON 검증 및 저장
+    textarea.addEventListener("input", () => {
+      try {
+        const json = JSON.parse(textarea.value);
+        if (this.validateSettings(json)) {
+          validationMessage.textContent = "유효한 JSON 설정입니다.";
+          validationMessage.className = "validation-message valid";
+          confirmButton.disabled = false;
+        } else {
+          validationMessage.textContent = "필수 필드가 누락되었습니다.";
+          validationMessage.className = "validation-message invalid";
+          confirmButton.disabled = true;
+        }
+      } catch (error) {
+        validationMessage.textContent = "잘못된 JSON 형식입니다.";
+        validationMessage.className = "validation-message invalid";
+        confirmButton.disabled = true;
+      }
+    });
+
+    confirmButton.addEventListener("click", () => {
+      try {
+        const json = JSON.parse(textarea.value);
+        if (this.validateSettings(json)) {
+          this.currentSettings = json;
+          this.originalSettings = JSON.parse(JSON.stringify(json));
+          this.changedFields.clear();
+          this.populateSettings();
+          closePasteModal();
+          alert("설정이 성공적으로 적용되었습니다.");
+        }
+      } catch (error) {
+        console.error("설정 적용 실패:", error);
+        alert("설정 적용 중 오류가 발생했습니다.");
+      }
+    });
+  }
+
+  /**
+   * 설정 JSON 검증
+   */
+  validateSettings(settings) {
+    // 필수 필드 검증
+    const requiredFields = [
+      "questions",
+      "questionDescriptions",
+      "questionChips",
+      "model",
+      "temperature",
+      "prompts",
+      "commonDescription",
+    ];
+
+    for (const field of requiredFields) {
+      if (!(field in settings)) {
+        return false;
+      }
+    }
+
+    // questions 배열 검증
+    if (!Array.isArray(settings.questions) || settings.questions.length === 0) {
+      return false;
+    }
+
+    // questionDescriptions 배열 검증
+    if (
+      !Array.isArray(settings.questionDescriptions) ||
+      settings.questionDescriptions.length !== settings.questions.length
+    ) {
+      return false;
+    }
+
+    // questionChips 배열 검증
+    if (
+      !Array.isArray(settings.questionChips) ||
+      settings.questionChips.length !== settings.questions.length
+    ) {
+      return false;
+    }
+
+    // model 값 검증
+    const validModels = [
+      "gpt-4o-mini",
+      "gpt-3.5-turbo",
+      "gpt-4",
+      "gpt-4-turbo",
+    ];
+    if (!validModels.includes(settings.model)) {
+      return false;
+    }
+
+    // temperature 값 검증
+    if (
+      typeof settings.temperature !== "number" ||
+      settings.temperature < 0 ||
+      settings.temperature > 2
+    ) {
+      return false;
+    }
+
+    // prompts 객체 검증
+    if (
+      typeof settings.prompts !== "object" ||
+      !settings.prompts.recommendationPrompt ||
+      !settings.prompts.nextQuestionPrompt
+    ) {
+      return false;
+    }
+
+    return true;
+  }
 }
 
 /**
@@ -1189,6 +1348,42 @@ input:disabled {
   background-color: #e1e8f5;
   border-color: #c6d5f5;
   font-style: italic;
+}
+
+.validation-message {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.validation-message.valid {
+  background-color: #e6f4ea;
+  color: #137333;
+  border: 1px solid #34a853;
+}
+
+.validation-message.invalid {
+  background-color: #fce8e6;
+  color: #c5221f;
+  border: 1px solid #d93025;
+}
+
+#paste-json-textarea {
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 300px;
+}
+
+#paste-json-modal .modal-content {
+  max-width: 800px;
+  width: 90%;
+}
+
+#paste-json-modal .modal-body {
+  padding: 20px;
 }
 `;
 
