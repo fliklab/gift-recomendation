@@ -1,6 +1,8 @@
 /**
  * 옵션 설정 모달 관리 클래스
  */
+import { FileImporter } from "./utils/fileImporter.js";
+
 export class OptionsModal {
   constructor() {
     this.isOpen = false;
@@ -135,9 +137,8 @@ export class OptionsModal {
     const modalFooter = document.createElement("div");
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
-      <button id="paste-json-settings" class="secondary-button">JSON에서 붙여넣기</button>
-      <button id="import-from-file" class="secondary-button">파일에서 불러오기</button>
-      <button id="copy-settings" class="secondary-button">현재 설정 복사하기</button>
+      <button id="import-from-file" class="secondary-button">설정 불러오기</button>
+      <button id="export-settings" class="secondary-button">현재 설정 내보내기</button>
       <button id="reset-settings" class="secondary-button">초기화</button>
       <button id="save-settings" class="primary-button">저장</button>
     `;
@@ -150,9 +151,8 @@ export class OptionsModal {
 
     // 버튼 요소 저장
     this.saveButton = document.getElementById("save-settings");
-    this.pasteJSONButton = document.getElementById("paste-json-settings");
     this.resetButton = document.getElementById("reset-settings");
-    this.copyButton = document.getElementById("copy-settings");
+    this.exportButton = document.getElementById("export-settings");
     this.closeButton = document.getElementById("close-modal-button");
   }
 
@@ -194,11 +194,12 @@ export class OptionsModal {
     // 초기화 버튼
     this.resetButton.addEventListener("click", () => this.resetSettings());
 
-    // 설정 복사 버튼
-    this.copyButton.addEventListener("click", () => this.copySettings());
+    // 설정 불러오기 버튼
+    const importButton = document.getElementById("import-from-file");
+    importButton.addEventListener("click", () => this.openFileSelectModal());
 
-    // JSON 붙여넣기 버튼
-    this.pasteJSONButton.addEventListener("click", () => this.openPasteModal());
+    // 설정 내보내기 버튼
+    this.exportButton.addEventListener("click", () => this.openExportModal());
 
     // Temperature 슬라이더
     const temperatureSlider = document.getElementById("temperature-slider");
@@ -207,10 +208,6 @@ export class OptionsModal {
       temperatureValue.textContent = temperatureSlider.value;
       this.markAsChanged("temperature");
     });
-
-    // 파일에서 불러오기 버튼
-    const importButton = document.getElementById("import-from-file");
-    importButton.addEventListener("click", () => this.openFileSelectModal());
   }
 
   /**
@@ -846,20 +843,94 @@ export class OptionsModal {
   }
 
   /**
-   * JSON 붙여넣기 모달 열기
+   * 파일 선택 모달 열기
    */
-  openPasteModal() {
+  openFileSelectModal() {
+    const fileSelectModal = document.createElement("div");
+    fileSelectModal.id = "file-select-modal";
+    fileSelectModal.className = "modal-container";
+    fileSelectModal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>설정 파일 선택</h2>
+          <button class="close-button">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="file-list-container">
+            <div class="file-list-header">
+              <span>제목</span>
+              <span>저자</span>
+              <span>등록일</span>
+            </div>
+            <div id="file-list" class="file-list">
+              <!-- 파일 목록이 여기에 동적으로 추가됨 -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="import-json-file" class="secondary-button">JSON 파일 불러오기</button>
+          <button id="paste-json-settings" class="secondary-button">JSON 직접 입력하기</button>
+          <button id="cancel-file-select" class="secondary-button">취소</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(fileSelectModal);
+
+    // 이벤트 리스너 설정
+    const closeButton = fileSelectModal.querySelector(".close-button");
+    const cancelButton = fileSelectModal.querySelector("#cancel-file-select");
+    const pasteJSONButton = fileSelectModal.querySelector(
+      "#paste-json-settings"
+    );
+    const importJSONButton = fileSelectModal.querySelector("#import-json-file");
+
+    const closeFileSelectModal = () => {
+      document.body.removeChild(fileSelectModal);
+    };
+
+    closeButton.addEventListener("click", closeFileSelectModal);
+    cancelButton.addEventListener("click", closeFileSelectModal);
+
+    pasteJSONButton.addEventListener("click", () => {
+      this.openPasteModal();
+      closeFileSelectModal();
+    });
+
+    importJSONButton.addEventListener("click", () => {
+      this.importJSONFile();
+      closeFileSelectModal();
+    });
+
+    // 파일 목록 로드 및 표시
+    this.loadAndDisplayFileList();
+  }
+
+  /**
+   * JSON 파일 불러오기
+   */
+  importJSONFile() {
+    FileImporter.importJSONFile((jsonContent) => {
+      // JSON 입력 모달 열기
+      this.openPasteModal(jsonContent);
+    });
+  }
+
+  /**
+   * JSON 입력 모달 열기
+   */
+  openPasteModal(preloadContent = "") {
     const pasteModal = document.createElement("div");
     pasteModal.id = "paste-json-modal";
     pasteModal.className = "modal-container";
     pasteModal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h2>JSON 설정 붙여넣기</h2>
+          <h2>JSON 설정 입력하기</h2>
           <button class="close-button">×</button>
         </div>
         <div class="modal-body">
-          <textarea id="paste-json-textarea" class="full-width" rows="15" placeholder="JSON 설정을 붙여넣어주세요..."></textarea>
+          <textarea id="paste-json-textarea" class="full-width" rows="15" placeholder="JSON 설정을 입력해주세요...">${preloadContent}</textarea>
           <div id="json-validation-message" class="validation-message"></div>
         </div>
         <div class="modal-footer">
@@ -887,24 +958,14 @@ export class OptionsModal {
     closeButton.addEventListener("click", closePasteModal);
     cancelButton.addEventListener("click", closePasteModal);
 
+    // 초기 JSON 검증 (파일에서 불러온 경우)
+    if (preloadContent) {
+      this.validateJSONInput(textarea, validationMessage, confirmButton);
+    }
+
     // JSON 검증 및 저장
     textarea.addEventListener("input", () => {
-      try {
-        const json = JSON.parse(textarea.value);
-        if (this.validateSettings(json)) {
-          validationMessage.textContent = "유효한 JSON 설정입니다.";
-          validationMessage.className = "validation-message valid";
-          confirmButton.disabled = false;
-        } else {
-          validationMessage.textContent = "필수 필드가 누락되었습니다.";
-          validationMessage.className = "validation-message invalid";
-          confirmButton.disabled = true;
-        }
-      } catch (error) {
-        validationMessage.textContent = "잘못된 JSON 형식입니다.";
-        validationMessage.className = "validation-message invalid";
-        confirmButton.disabled = true;
-      }
+      this.validateJSONInput(textarea, validationMessage, confirmButton);
     });
 
     confirmButton.addEventListener("click", () => {
@@ -923,6 +984,265 @@ export class OptionsModal {
         alert("설정 적용 중 오류가 발생했습니다.");
       }
     });
+  }
+
+  /**
+   * JSON 입력값 검증
+   */
+  validateJSONInput(textarea, validationMessage, confirmButton) {
+    try {
+      const json = JSON.parse(textarea.value);
+      if (this.validateSettings(json)) {
+        validationMessage.textContent = "유효한 JSON 설정입니다.";
+        validationMessage.className = "validation-message valid";
+        confirmButton.disabled = false;
+      } else {
+        validationMessage.textContent = "필수 필드가 누락되었습니다.";
+        validationMessage.className = "validation-message invalid";
+        confirmButton.disabled = true;
+      }
+    } catch (error) {
+      validationMessage.textContent = "잘못된 JSON 형식입니다.";
+      validationMessage.className = "validation-message invalid";
+      confirmButton.disabled = true;
+    }
+  }
+
+  /**
+   * 설정 내보내기 모달 열기
+   */
+  openExportModal() {
+    const exportModal = document.createElement("div");
+    exportModal.id = "export-settings-modal";
+    exportModal.className = "modal-container";
+    exportModal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>설정 내보내기</h2>
+          <button class="close-button">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-row">
+            <label for="export-title">제목</label>
+            <input type="text" id="export-title" class="full-width" placeholder="설정 파일 제목을 입력하세요">
+          </div>
+          <div class="settings-row">
+            <label for="export-author">작성자</label>
+            <input type="text" id="export-author" class="full-width" placeholder="작성자 이름을 입력하세요">
+          </div>
+          <div class="settings-row">
+            <label for="export-description">설명</label>
+            <textarea id="export-description" class="full-width" rows="3" placeholder="설정 파일에 대한 설명을 입력하세요"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-export" class="secondary-button">취소</button>
+          <button id="copy-to-clipboard" class="secondary-button">복사만 하기</button>
+          <button id="save-to-file" class="secondary-button">파일로 저장하기</button>
+          <button id="create-pr" class="primary-button">PR 올리기</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(exportModal);
+
+    // 이벤트 리스너 설정
+    const closeButton = exportModal.querySelector(".close-button");
+    const cancelButton = exportModal.querySelector("#cancel-export");
+    const saveToFileButton = exportModal.querySelector("#save-to-file");
+    const createPRButton = exportModal.querySelector("#create-pr");
+    const copyToClipboardButton =
+      exportModal.querySelector("#copy-to-clipboard");
+
+    const closeExportModal = () => {
+      document.body.removeChild(exportModal);
+    };
+
+    closeButton.addEventListener("click", closeExportModal);
+    cancelButton.addEventListener("click", closeExportModal);
+
+    saveToFileButton.addEventListener("click", () => {
+      this.exportToFile();
+      closeExportModal();
+    });
+
+    createPRButton.addEventListener("click", () => {
+      this.createPullRequest();
+      closeExportModal();
+    });
+
+    copyToClipboardButton.addEventListener("click", () => {
+      this.copySettingsToClipboard();
+      closeExportModal();
+    });
+  }
+
+  /**
+   * 설정을 파일로 내보내기
+   */
+  exportToFile() {
+    try {
+      const title = document.getElementById("export-title").value;
+      const author = document.getElementById("export-author").value;
+      const description = document.getElementById("export-description").value;
+
+      if (!title || !author) {
+        alert("제목과 작성자는 필수 입력 항목입니다.");
+        return;
+      }
+
+      // 현재 설정 가져오기
+      this.updateSettingsFromUI();
+
+      // 메타데이터 추가
+      const exportData = {
+        ...this.currentSettings,
+        id: this.generateUniqueId(),
+        title: title,
+        author: author,
+        description: description,
+        createdAt: new Date().toISOString().split("T")[0],
+      };
+
+      // 파일로 저장
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title.replace(/\s+/g, "_")}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert("설정이 파일로 저장되었습니다.");
+    } catch (error) {
+      console.error("설정 내보내기 실패:", error);
+      alert("설정 내보내기에 실패했습니다.");
+    }
+  }
+
+  /**
+   * GitHub PR 생성
+   */
+  async createPullRequest() {
+    alert("준비중입니다.");
+  }
+
+  /**
+   * 고유 ID 생성
+   */
+  generateUniqueId() {
+    return (
+      "setting_" +
+      Date.now().toString(36) +
+      Math.random().toString(36).substr(2, 5)
+    );
+  }
+
+  /**
+   * 설정을 클립보드에 복사
+   */
+  async copySettingsToClipboard() {
+    try {
+      const title = document.getElementById("export-title").value;
+      const author = document.getElementById("export-author").value;
+      const description = document.getElementById("export-description").value;
+
+      if (!title || !author) {
+        alert("제목과 작성자는 필수 입력 항목입니다.");
+        return;
+      }
+
+      // 현재 설정 가져오기
+      this.updateSettingsFromUI();
+
+      // 메타데이터 추가
+      const exportData = {
+        ...this.currentSettings,
+        id: this.generateUniqueId(),
+        title: title,
+        author: author,
+        description: description,
+        createdAt: new Date().toISOString().split("T")[0],
+      };
+
+      // 클립보드에 복사
+      await navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+      alert("설정이 클립보드에 복사되었습니다.");
+    } catch (error) {
+      console.error("설정 복사 실패:", error);
+      alert("설정을 클립보드에 복사하는데 실패했습니다.");
+    }
+  }
+
+  /**
+   * 파일 목록 로드 및 표시
+   */
+  async loadAndDisplayFileList() {
+    const fileList = document.getElementById("file-list");
+    fileList.innerHTML = "";
+
+    try {
+      // 실제 구현에서는 서버에서 파일 목록을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
+      // 여기서는 예시로 하드코딩된 파일 목록을 사용합니다.
+      const files = [
+        {
+          id: "default",
+          title: "기본 설정",
+          author: "시스템",
+          createdAt: "2024-03-20",
+        },
+        {
+          id: "birthday",
+          title: "생일 선물 설정",
+          author: "사용자1",
+          createdAt: "2024-03-21",
+        },
+      ];
+
+      files.forEach((file) => {
+        const fileItem = document.createElement("div");
+        fileItem.className = "file-list-item";
+        fileItem.innerHTML = `
+          <span class="file-title">${file.title}</span>
+          <span class="file-author">${file.author}</span>
+          <span class="file-date">${file.createdAt}</span>
+        `;
+        fileItem.addEventListener("click", () =>
+          this.loadSelectedFile(file.id)
+        );
+        fileList.appendChild(fileItem);
+      });
+    } catch (error) {
+      console.error("파일 목록 로드 실패:", error);
+      alert("파일 목록을 불러오는데 실패했습니다.");
+    }
+  }
+
+  /**
+   * 선택된 파일 로드
+   */
+  async loadSelectedFile(fileId) {
+    try {
+      // 실제 구현에서는 서버에서 파일을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
+      // 여기서는 예시로 하드코딩된 파일을 사용합니다.
+      const response = await fetch(`/js/settings/${fileId}.json`);
+      const settings = await response.json();
+
+      this.currentSettings = settings;
+      this.originalSettings = JSON.parse(JSON.stringify(settings));
+      this.changedFields.clear();
+
+      this.populateSettings();
+      document.getElementById("file-select-modal").remove();
+      alert("설정이 성공적으로 로드되었습니다.");
+    } catch (error) {
+      console.error("파일 로드 실패:", error);
+      alert("파일을 불러오는데 실패했습니다.");
+    }
   }
 
   /**
@@ -1000,138 +1320,23 @@ export class OptionsModal {
   }
 
   /**
-   * 파일 선택 모달 열기
+   * 프롬프트 파서 - 템플릿 문법을 실제 데이터로 치환
    */
-  openFileSelectModal() {
-    const fileSelectModal = document.createElement("div");
-    fileSelectModal.id = "file-select-modal";
-    fileSelectModal.className = "modal-container";
-    fileSelectModal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>설정 파일 선택</h2>
-          <button class="close-button">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="file-list-container">
-            <div class="file-list-header">
-              <span>제목</span>
-              <span>저자</span>
-              <span>등록일</span>
-            </div>
-            <div id="file-list" class="file-list">
-              <!-- 파일 목록이 여기에 동적으로 추가됨 -->
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="cancel-file-select" class="secondary-button">취소</button>
-        </div>
-      </div>
-    `;
+  parsePromptTemplate(template, data) {
+    // {{현재까지답변}} 형식의 템플릿 변수 처리
+    if (template.includes("{{현재까지답변}}")) {
+      if (data.questions && data.answers) {
+        const answersText = data.answers
+          .map((answer, index) => `- ${data.questions[index]}: ${answer}`)
+          .join("\n");
 
-    document.body.appendChild(fileSelectModal);
-
-    // 이벤트 리스너 설정
-    const closeButton = fileSelectModal.querySelector(".close-button");
-    const cancelButton = fileSelectModal.querySelector("#cancel-file-select");
-
-    const closeFileSelectModal = () => {
-      document.body.removeChild(fileSelectModal);
-    };
-
-    closeButton.addEventListener("click", closeFileSelectModal);
-    cancelButton.addEventListener("click", closeFileSelectModal);
-
-    // 파일 목록 로드 및 표시
-    this.loadAndDisplayFileList();
-  }
-
-  /**
-   * 파일 목록 로드 및 표시
-   */
-  async loadAndDisplayFileList() {
-    const fileList = document.getElementById("file-list");
-    fileList.innerHTML = "";
-
-    try {
-      // 실제 구현에서는 서버에서 파일 목록을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
-      // 여기서는 예시로 하드코딩된 파일 목록을 사용합니다.
-      const files = [
-        {
-          id: "default",
-          title: "기본 설정",
-          author: "시스템",
-          createdAt: "2024-03-20",
-        },
-        {
-          id: "birthday",
-          title: "생일 선물 설정",
-          author: "사용자1",
-          createdAt: "2024-03-21",
-        },
-      ];
-
-      files.forEach((file) => {
-        const fileItem = document.createElement("div");
-        fileItem.className = "file-list-item";
-        fileItem.innerHTML = `
-          <span class="file-title">${file.title}</span>
-          <span class="file-author">${file.author}</span>
-          <span class="file-date">${file.createdAt}</span>
-        `;
-        fileItem.addEventListener("click", () =>
-          this.loadSelectedFile(file.id)
-        );
-        fileList.appendChild(fileItem);
-      });
-    } catch (error) {
-      console.error("파일 목록 로드 실패:", error);
-      alert("파일 목록을 불러오는데 실패했습니다.");
+        return template.replace("{{현재까지답변}}", answersText);
+      }
     }
+
+    // 다른 템플릿 변수 처리 (필요시 확장)
+    return template;
   }
-
-  /**
-   * 선택된 파일 로드
-   */
-  async loadSelectedFile(fileId) {
-    try {
-      // 실제 구현에서는 서버에서 파일을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
-      // 여기서는 예시로 하드코딩된 파일을 사용합니다.
-      const response = await fetch(`/js/settings/${fileId}.json`);
-      const settings = await response.json();
-
-      this.currentSettings = settings;
-      this.originalSettings = JSON.parse(JSON.stringify(settings));
-      this.changedFields.clear();
-
-      this.populateSettings();
-      document.getElementById("file-select-modal").remove();
-      alert("설정이 성공적으로 로드되었습니다.");
-    } catch (error) {
-      console.error("파일 로드 실패:", error);
-      alert("파일을 불러오는데 실패했습니다.");
-    }
-  }
-}
-
-/**
- * 프롬프트 파서 - 템플릿 문법을 실제 데이터로 치환
- */
-export function parsePromptTemplate(template, data) {
-  // {{현재까지답변}} 형식의 템플릿 변수 처리
-  if (template.includes("{{현재까지답변}}")) {
-    if (data.questions && data.answers) {
-      const answersText = data.answers
-        .map((answer, index) => `- ${data.questions[index]}: ${answer}`)
-        .join("\n");
-
-      return template.replace("{{현재까지답변}}", answersText);
-    }
-  }
-
-  // 다른 템플릿 변수 처리 (필요시 확장)
-  return template;
 }
 
 // 스타일 추가
@@ -1555,6 +1760,32 @@ input:disabled {
 .file-date {
   color: #5f6368;
   text-align: right;
+}
+
+#export-settings-modal .modal-content {
+  max-width: 600px;
+}
+
+#export-settings-modal .settings-row {
+  margin-bottom: 20px;
+}
+
+#export-settings-modal .settings-row label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+#export-settings-modal .full-width {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+#export-settings-modal textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 `;
 

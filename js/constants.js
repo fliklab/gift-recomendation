@@ -1,7 +1,7 @@
 // settings.json에서 설정값을 불러오는 함수
 async function loadSettingsFromJSON() {
   try {
-    const response = await fetch("js/settings.json");
+    const response = await fetch("js/settings/default.json");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
