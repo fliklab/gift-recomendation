@@ -137,8 +137,9 @@ export class OptionsModal {
     const modalFooter = document.createElement("div");
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
-      <button id="import-from-file" class="secondary-button">설정 불러오기</button>
-      <button id="export-settings" class="secondary-button">현재 설정 내보내기</button>
+      <button id="import-from-file" class="secondary-button">설정 리스트 보기</button>
+      <!-- 임시 비활성화 <button id="export-settings" class="secondary-button">현재 설정 내보내기</button> -->
+      <button id="add-to-list" class="secondary-button">리스트에 추가하기</button>
       <button id="reset-settings" class="secondary-button">초기화</button>
       <button id="save-settings" class="primary-button">저장</button>
     `;
@@ -154,6 +155,10 @@ export class OptionsModal {
     this.resetButton = document.getElementById("reset-settings");
     this.exportButton = document.getElementById("export-settings");
     this.closeButton = document.getElementById("close-modal-button");
+
+    // 이벤트 리스너 설정
+    const addToListButton = document.getElementById("add-to-list");
+    addToListButton.addEventListener("click", () => this.addToSettingsList());
   }
 
   /**
@@ -819,26 +824,50 @@ export class OptionsModal {
       // UI 값에서 설정 업데이트
       this.updateSettingsFromUI();
 
-      console.log("저장할 설정:", JSON.stringify(this.currentSettings));
-      console.log("질문 개수:", this.currentSettings.questions.length);
-      console.log("질문 목록:", this.currentSettings.questions);
-
       // constants.js를 통해 설정 저장
       const constants = await import("./constants.js");
       await constants.saveSettings(this.currentSettings);
 
-      alert(
-        "설정이 저장되었습니다. 페이지를 새로고침하면 변경사항이 적용됩니다."
-      );
+      alert("설정이 저장되었습니다.");
       this.closeModal();
-
-      // 페이지 새로고침 확인
-      if (confirm("지금 페이지를 새로고침하여 변경사항을 적용하시겠습니까?")) {
-        window.location.reload();
-      }
     } catch (error) {
       console.error("설정 저장 실패:", error);
       alert("설정 저장 중 오류가 발생했습니다.");
+    }
+  }
+
+  /**
+   * 설정을 리스트에 추가
+   */
+  async addToSettingsList() {
+    try {
+      // UI 값에서 설정 업데이트
+      this.updateSettingsFromUI();
+
+      // 현재 날짜와 시간 가져오기
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0].replace(/-/g, "");
+      const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "");
+
+      // 리스트에 추가할 데이터 준비
+      const settingsToAdd = {
+        ...this.currentSettings,
+        id: this.generateUniqueId(),
+        isLocal: true,
+        title: `새로운 설정 ${dateStr}_${timeStr}`,
+        createdAt: now.toISOString().split("T")[0],
+      };
+
+      // 로컬스토리지에 저장
+      if (this.saveToLocalStorage(settingsToAdd)) {
+        alert("설정이 리스트에 추가되었습니다.");
+        this.closeModal();
+      } else {
+        alert("설정 추가에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("설정 추가 실패:", error);
+      alert("설정 추가 중 오류가 발생했습니다.");
     }
   }
 
@@ -1186,34 +1215,66 @@ export class OptionsModal {
     fileList.innerHTML = "";
 
     try {
-      // 실제 구현에서는 서버에서 파일 목록을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
-      // 여기서는 예시로 하드코딩된 파일 목록을 사용합니다.
-      const files = [
+      // 로컬스토리지에서 저장된 설정 가져오기
+      const savedSettings = JSON.parse(
+        localStorage.getItem("savedSettings") || "[]"
+      );
+
+      // 기본 설정 파일 목록
+      const defaultFiles = [
         {
           id: "default",
           title: "기본 설정",
           author: "시스템",
           createdAt: "2024-03-20",
+          isLocal: false,
         },
         {
           id: "birthday",
           title: "생일 선물 설정",
           author: "사용자1",
           createdAt: "2024-03-21",
+          isLocal: false,
         },
       ];
 
-      files.forEach((file) => {
+      // 로컬스토리지 설정과 기본 설정 파일을 합침
+      const allFiles = [...defaultFiles, ...savedSettings];
+
+      allFiles.forEach((file) => {
         const fileItem = document.createElement("div");
         fileItem.className = "file-list-item";
         fileItem.innerHTML = `
-          <span class="file-title">${file.title}</span>
-          <span class="file-author">${file.author}</span>
-          <span class="file-date">${file.createdAt}</span>
+          <div class="file-info">
+            <span class="file-title">${file.title}</span>
+            <span class="file-author">${file.author}</span>
+            <span class="file-date">${file.createdAt}</span>
+            ${file.isLocal ? '<span class="local-badge">로컬</span>' : ""}
+          </div>
+          <div class="file-actions">
+            ${
+              file.isLocal
+                ? `<button class="delete-file-button" data-id="${file.id}">삭제</button>`
+                : ""
+            }
+          </div>
         `;
-        fileItem.addEventListener("click", () =>
-          this.loadSelectedFile(file.id)
-        );
+
+        // 파일 선택 이벤트
+        fileItem.querySelector(".file-info").addEventListener("click", () => {
+          this.loadSelectedFile(file.id, file.isLocal);
+        });
+
+        // 삭제 버튼 이벤트 (로컬 파일인 경우에만)
+        if (file.isLocal) {
+          fileItem
+            .querySelector(".delete-file-button")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              this.deleteFromLocalStorage(file.id);
+            });
+        }
+
         fileList.appendChild(fileItem);
       });
     } catch (error) {
@@ -1225,12 +1286,24 @@ export class OptionsModal {
   /**
    * 선택된 파일 로드
    */
-  async loadSelectedFile(fileId) {
+  async loadSelectedFile(fileId, isLocal = false) {
     try {
-      // 실제 구현에서는 서버에서 파일을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
-      // 여기서는 예시로 하드코딩된 파일을 사용합니다.
-      const response = await fetch(`/js/settings/${fileId}.json`);
-      const settings = await response.json();
+      let settings;
+      if (isLocal) {
+        // 로컬스토리지에서 설정 가져오기
+        const savedSettings = JSON.parse(
+          localStorage.getItem("savedSettings") || "[]"
+        );
+        settings = savedSettings.find((file) => file.id === fileId);
+      } else {
+        // 기본 설정 파일 로드
+        const response = await fetch(`/js/settings/${fileId}.json`);
+        settings = await response.json();
+      }
+
+      if (!settings) {
+        throw new Error("설정을 찾을 수 없습니다.");
+      }
 
       this.currentSettings = settings;
       this.originalSettings = JSON.parse(JSON.stringify(settings));
@@ -1242,6 +1315,32 @@ export class OptionsModal {
     } catch (error) {
       console.error("파일 로드 실패:", error);
       alert("파일을 불러오는데 실패했습니다.");
+    }
+  }
+
+  /**
+   * 설정을 로컬스토리지에 저장
+   */
+  saveToLocalStorage(settings) {
+    try {
+      const savedSettings = JSON.parse(
+        localStorage.getItem("savedSettings") || "[]"
+      );
+      const existingIndex = savedSettings.findIndex(
+        (file) => file.id === settings.id
+      );
+
+      if (existingIndex >= 0) {
+        savedSettings[existingIndex] = settings;
+      } else {
+        savedSettings.push(settings);
+      }
+
+      localStorage.setItem("savedSettings", JSON.stringify(savedSettings));
+      return true;
+    } catch (error) {
+      console.error("로컬스토리지 저장 실패:", error);
+      return false;
     }
   }
 
@@ -1336,6 +1435,30 @@ export class OptionsModal {
 
     // 다른 템플릿 변수 처리 (필요시 확장)
     return template;
+  }
+
+  /**
+   * 로컬스토리지에서 설정 삭제
+   */
+  deleteFromLocalStorage(fileId) {
+    if (confirm("이 설정을 삭제하시겠습니까?")) {
+      try {
+        const savedSettings = JSON.parse(
+          localStorage.getItem("savedSettings") || "[]"
+        );
+        const updatedSettings = savedSettings.filter(
+          (file) => file.id !== fileId
+        );
+        localStorage.setItem("savedSettings", JSON.stringify(updatedSettings));
+
+        // 파일 목록 새로고침
+        this.loadAndDisplayFileList();
+        alert("설정이 삭제되었습니다.");
+      } catch (error) {
+        console.error("설정 삭제 실패:", error);
+        alert("설정 삭제에 실패했습니다.");
+      }
+    }
   }
 }
 
@@ -1733,9 +1856,10 @@ input:disabled {
 }
 
 .file-list-item {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -1745,47 +1869,57 @@ input:disabled {
   background-color: #f1f3f4;
 }
 
-.file-list-item:last-child {
-  border-bottom: none;
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
 }
 
 .file-title {
   font-weight: 500;
+  min-width: 200px;
 }
 
 .file-author {
   color: #5f6368;
+  min-width: 100px;
 }
 
 .file-date {
   color: #5f6368;
-  text-align: right;
+  min-width: 100px;
 }
 
-#export-settings-modal .modal-content {
-  max-width: 600px;
-}
-
-#export-settings-modal .settings-row {
-  margin-bottom: 20px;
-}
-
-#export-settings-modal .settings-row label {
-  display: block;
-  margin-bottom: 5px;
+.local-badge {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 500;
+  margin-left: 8px;
 }
 
-#export-settings-modal .full-width {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #e0e0e0;
+.file-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delete-file-button {
+  background-color: #fce8e6;
+  color: #d93025;
+  border: none;
+  padding: 6px 16px;
   border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
 
-#export-settings-modal textarea {
-  resize: vertical;
-  min-height: 80px;
+.delete-file-button:hover {
+  background-color: #fad2cf;
 }
 `;
 
