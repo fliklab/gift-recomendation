@@ -12,6 +12,8 @@ import { ApiService } from "./apiService.js";
 import { UIService } from "./uiService.js";
 import { OptionsModal } from "./optionsModal.js";
 import { calculateCost, convertUSDToKRW } from "./utils/costUtils.js";
+import { VERSION } from "./config/version.js";
+import { storage } from "./utils/storage.js";
 
 class GiftRecommender {
   constructor() {
@@ -29,6 +31,9 @@ class GiftRecommender {
 
   async init() {
     console.log("Initializing...");
+
+    // 버전 체크 및 설정 관리
+    checkVersionAndSettings();
 
     // 설정 초기화
     await initSettings();
@@ -271,7 +276,55 @@ class GiftRecommender {
   }
 }
 
+// 버전 체크 및 설정 관리
+function checkVersionAndSettings() {
+  const lastVersion = storage.getLastVersion();
+  const lastSettings = storage.getLastSettings();
+
+  // 버전 표시
+  document.getElementById("version").textContent = `v${VERSION}`;
+
+  if (lastVersion && lastVersion !== VERSION) {
+    // 버전이 변경된 경우
+    if (lastSettings) {
+      // 이전 설정이 있는 경우 알림 표시
+      const notification = document.createElement("div");
+      notification.className = "notification";
+      notification.innerHTML = `
+        <p>새로운 버전이 업데이트되었습니다!</p>
+        <p>마지막으로 변경했던 설정은 리스트에 저장되어 있어요.</p>
+      `;
+      document
+        .querySelector(".container")
+        .insertBefore(notification, document.querySelector("h1"));
+
+      // 이전 설정을 리스트에 추가
+      if (lastSettings.answers) {
+        const chipsContainer = document.getElementById("chips-container");
+        lastSettings.answers.forEach((answer) => {
+          const chip = document.createElement("div");
+          chip.className = "chip";
+          chip.textContent = answer;
+          chipsContainer.appendChild(chip);
+        });
+      }
+    }
+
+    // 설정 초기화
+    storage.clearSettings();
+  }
+
+  // 현재 버전 저장
+  storage.setLastVersion(VERSION);
+}
+
 // 애플리케이션 시작
 console.log("Starting application...");
 const app = new GiftRecommender();
 app.init();
+
+// 앱 초기화 시 버전 체크 실행
+document.addEventListener("DOMContentLoaded", () => {
+  checkVersionAndSettings();
+  // ... existing initialization code ...
+});
