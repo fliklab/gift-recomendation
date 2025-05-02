@@ -136,6 +136,7 @@ export class OptionsModal {
     modalFooter.className = "modal-footer";
     modalFooter.innerHTML = `
       <button id="paste-json-settings" class="secondary-button">JSON에서 붙여넣기</button>
+      <button id="import-from-file" class="secondary-button">파일에서 불러오기</button>
       <button id="copy-settings" class="secondary-button">현재 설정 복사하기</button>
       <button id="reset-settings" class="secondary-button">초기화</button>
       <button id="save-settings" class="primary-button">저장</button>
@@ -206,6 +207,10 @@ export class OptionsModal {
       temperatureValue.textContent = temperatureSlider.value;
       this.markAsChanged("temperature");
     });
+
+    // 파일에서 불러오기 버튼
+    const importButton = document.getElementById("import-from-file");
+    importButton.addEventListener("click", () => this.openFileSelectModal());
   }
 
   /**
@@ -993,6 +998,121 @@ export class OptionsModal {
 
     return true;
   }
+
+  /**
+   * 파일 선택 모달 열기
+   */
+  openFileSelectModal() {
+    const fileSelectModal = document.createElement("div");
+    fileSelectModal.id = "file-select-modal";
+    fileSelectModal.className = "modal-container";
+    fileSelectModal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>설정 파일 선택</h2>
+          <button class="close-button">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="file-list-container">
+            <div class="file-list-header">
+              <span>제목</span>
+              <span>저자</span>
+              <span>등록일</span>
+            </div>
+            <div id="file-list" class="file-list">
+              <!-- 파일 목록이 여기에 동적으로 추가됨 -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-file-select" class="secondary-button">취소</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(fileSelectModal);
+
+    // 이벤트 리스너 설정
+    const closeButton = fileSelectModal.querySelector(".close-button");
+    const cancelButton = fileSelectModal.querySelector("#cancel-file-select");
+
+    const closeFileSelectModal = () => {
+      document.body.removeChild(fileSelectModal);
+    };
+
+    closeButton.addEventListener("click", closeFileSelectModal);
+    cancelButton.addEventListener("click", closeFileSelectModal);
+
+    // 파일 목록 로드 및 표시
+    this.loadAndDisplayFileList();
+  }
+
+  /**
+   * 파일 목록 로드 및 표시
+   */
+  async loadAndDisplayFileList() {
+    const fileList = document.getElementById("file-list");
+    fileList.innerHTML = "";
+
+    try {
+      // 실제 구현에서는 서버에서 파일 목록을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
+      // 여기서는 예시로 하드코딩된 파일 목록을 사용합니다.
+      const files = [
+        {
+          id: "default",
+          title: "기본 설정",
+          author: "시스템",
+          createdAt: "2024-03-20",
+        },
+        {
+          id: "birthday",
+          title: "생일 선물 설정",
+          author: "사용자1",
+          createdAt: "2024-03-21",
+        },
+      ];
+
+      files.forEach((file) => {
+        const fileItem = document.createElement("div");
+        fileItem.className = "file-list-item";
+        fileItem.innerHTML = `
+          <span class="file-title">${file.title}</span>
+          <span class="file-author">${file.author}</span>
+          <span class="file-date">${file.createdAt}</span>
+        `;
+        fileItem.addEventListener("click", () =>
+          this.loadSelectedFile(file.id)
+        );
+        fileList.appendChild(fileItem);
+      });
+    } catch (error) {
+      console.error("파일 목록 로드 실패:", error);
+      alert("파일 목록을 불러오는데 실패했습니다.");
+    }
+  }
+
+  /**
+   * 선택된 파일 로드
+   */
+  async loadSelectedFile(fileId) {
+    try {
+      // 실제 구현에서는 서버에서 파일을 가져오거나 로컬 스토리지에서 가져올 수 있습니다.
+      // 여기서는 예시로 하드코딩된 파일을 사용합니다.
+      const response = await fetch(`/js/settings/${fileId}.json`);
+      const settings = await response.json();
+
+      this.currentSettings = settings;
+      this.originalSettings = JSON.parse(JSON.stringify(settings));
+      this.changedFields.clear();
+
+      this.populateSettings();
+      document.getElementById("file-select-modal").remove();
+      alert("설정이 성공적으로 로드되었습니다.");
+    } catch (error) {
+      console.error("파일 로드 실패:", error);
+      alert("파일을 불러오는데 실패했습니다.");
+    }
+  }
 }
 
 /**
@@ -1384,6 +1504,57 @@ input:disabled {
 
 #paste-json-modal .modal-body {
   padding: 20px;
+}
+
+.file-list-container {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.file-list-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 10px 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 500;
+}
+
+.file-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.file-list-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-list-item:hover {
+  background-color: #f1f3f4;
+}
+
+.file-list-item:last-child {
+  border-bottom: none;
+}
+
+.file-title {
+  font-weight: 500;
+}
+
+.file-author {
+  color: #5f6368;
+}
+
+.file-date {
+  color: #5f6368;
+  text-align: right;
 }
 `;
 

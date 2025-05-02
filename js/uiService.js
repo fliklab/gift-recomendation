@@ -19,6 +19,9 @@ export class UIService {
     if (!this.startButton) {
       console.error("Start button not found!");
     }
+    if (!this.questionElement) {
+      console.error("Question element not found!");
+    }
   }
 
   showApiKeyInput() {
@@ -60,14 +63,43 @@ export class UIService {
   }
 
   showQuestion(question, description, commonDescription, chips) {
+    if (!this.questionElement) {
+      console.error("Cannot show question: question element not found");
+      return;
+    }
+
+    console.log("Showing question:", question);
+    console.log(
+      "Question box visibility before:",
+      this.questionBox.classList.contains("hidden")
+    );
+    console.log(
+      "Question box style before:",
+      window.getComputedStyle(this.questionBox).display
+    );
+
+    // hidden 클래스 제거를 강제로 시도
+    this.questionBox.classList.remove("hidden");
+    this.questionBox.style.display = "block"; // 명시적으로 display 속성 설정
+
     this.questionElement.textContent = question;
     this.questionDescriptionElement.innerHTML = `
       <p>${description}</p>
       <p class="common-description">${commonDescription}</p>
     `;
-    this.questionBox.classList.remove("hidden");
+
     this.resultBox.classList.add("hidden");
     this.loadingSpinner.classList.add("hidden");
+
+    console.log(
+      "Question box visibility after:",
+      this.questionBox.classList.contains("hidden")
+    );
+    console.log(
+      "Question box style after:",
+      window.getComputedStyle(this.questionBox).display
+    );
+
     this.answerInput.value = "";
     this.answerInput.disabled = false;
     this.submitButton.classList.remove("loading");
