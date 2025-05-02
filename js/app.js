@@ -153,7 +153,9 @@ class GiftRecommender {
       // AI 맞춤형 질문 여부
       const isAIQuestion = currentQuestionType === "ai";
 
+      // AI 맞춤형 질문인 경우
       // AI 맞춤형 질문이거나 4번째 질문 이상인 경우 (기존 로직 호환성 유지)
+      // AI 맞춤형 질문인 경우
       if (isAIQuestion) {
         try {
           const nextQuestion = await this.api.getNextQuestion(this.answers);
@@ -161,12 +163,14 @@ class GiftRecommender {
           this.totalTokens += nextQuestion.usage?.total_tokens || 0;
           this.currentQuestion = nextQuestion.question;
 
-          // AI 맞춤형 질문인 경우 UI에 질문 필드를 숨기고 설명만 표시
-          document.getElementById("question").classList.add("hidden");
           this.ui.showQuestion(
-            "", // 빈 질문 전달
+          this.ui.showQuestion(
+            this.currentQuestion, // 빈 질문 전달
+          // AI 맞춤형 질문인 경우 UI에 질문 필드를 숨기고 설명만 표시
+          this.ui.showQuestion(
+            this.currentQuestion,
             nextQuestion.description,
-            COMMON_DESCRIPTION(),
+            this.currentQuestion,
             nextQuestion.chips
           );
         } catch (error) {
