@@ -31,11 +31,6 @@ class GiftRecommender {
 
   async init() {
     console.log("Initializing...");
-
-    // 버전 체크 및 설정 관리
-    checkVersionAndSettings();
-
-    // 설정 초기화
     await initSettings();
 
     // URL에서 API 키 가져오기
@@ -145,6 +140,9 @@ class GiftRecommender {
       answer: answer,
     });
 
+    // 설정 저장
+    this.saveCurrentSettings();
+
     this.currentIndex++;
 
     if (this.currentIndex < QUESTIONS().length) {
@@ -199,6 +197,20 @@ class GiftRecommender {
     } else {
       await this.getRecommendations();
     }
+  }
+
+  // 현재 설정을 저장하는 메서드
+  saveCurrentSettings() {
+    const currentSettings = {
+      answers: [...this.answers],
+      questionAnswerPairs: [...this.questionAnswerPairs],
+      currentIndex: this.currentIndex,
+      currentQuestion: this.currentQuestion,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log("설정 저장:", currentSettings);
+    storage.setLastSettings(currentSettings);
   }
 
   async getRecommendations() {
@@ -281,13 +293,20 @@ function checkVersionAndSettings() {
   const lastVersion = storage.getLastVersion();
   const lastSettings = storage.getLastSettings();
 
+  console.log("버전 체크:", { lastVersion, currentVersion: VERSION });
+
   // 버전 표시
   document.getElementById("version").textContent = `v${VERSION}`;
 
-  if (lastVersion && lastVersion !== VERSION) {
-    // 버전이 변경된 경우
+  // 버전이 다르거나 lastVersion이 없는 경우 (첫 방문)
+  if (!lastVersion || lastVersion !== VERSION) {
+    console.log("버전이 변경되었거나 첫 방문입니다.");
+
+    // 이전 설정이 있는 경우 알림 표시
     if (lastSettings) {
-      // 이전 설정이 있는 경우 알림 표시
+      console.log("이전 설정이 있습니다:", lastSettings);
+
+      // 알림 표시
       const notification = document.createElement("div");
       notification.className = "notification";
       notification.innerHTML = `
@@ -308,23 +327,27 @@ function checkVersionAndSettings() {
           chipsContainer.appendChild(chip);
         });
       }
+    } else {
+      console.log("이전 설정이 없습니다.");
     }
 
     // 설정 초기화
     storage.clearSettings();
+  } else {
+    console.log("버전이 동일합니다.");
   }
 
   // 현재 버전 저장
   storage.setLastVersion(VERSION);
 }
 
-// 애플리케이션 시작
-console.log("Starting application...");
-const app = new GiftRecommender();
-app.init();
-
-// 앱 초기화 시 버전 체크 실행
+// 앱 초기화
 document.addEventListener("DOMContentLoaded", () => {
+  // 버전 체크를 먼저 실행
   checkVersionAndSettings();
-  // ... existing initialization code ...
+
+  // 그 다음 GiftRecommender 초기화
+  console.log("Starting application...");
+  const app = new GiftRecommender();
+  app.init();
 });
